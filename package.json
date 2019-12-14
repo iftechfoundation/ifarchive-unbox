@@ -1,0 +1,29 @@
+{
+  "name": "ifarchive-unbox",
+  "version": "0.1.0",
+  "description": "IF Archive unboxing proxy",
+  "author": "Dannii Willis <curiousdannii@gmail.com>",
+  "license": "MIT",
+  "repository": "curiousdannii/ifarchive-unbox",
+  "type": "module",
+  "dependencies": {
+    "koa": "^2.13.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.4.1",
+    "jest": "^27.0.0",
+    "nodemon": "^2.0.15",
+    "supertest": "^6.0.0"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "start": "nodemon src/main.js",
+    "test": "jest --watchAll --verbose"
+  },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "<rootDir>/node_modules/",
+      "<rootDir>/test/"
+    ]
+  }
+}
