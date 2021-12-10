@@ -12,6 +12,7 @@ https://github.com/curiousdannii/ifarchive-unbox
 import Koa from 'koa'
 import {router} from './router.js'
 
-export const app = new Koa()
+const app = new Koa()
+export default app
 
 app.use(router)
