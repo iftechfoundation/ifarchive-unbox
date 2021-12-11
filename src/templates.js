@@ -34,6 +34,13 @@ export function wrapper(content) {
 </html>`
 }
 
+export function error(msg) {
+    return `
+        <div style="text-align: center">
+            <p><b>Error:</b> <pre style="font-size: 1.4em">${msg}</pre></p>
+        </div>`
+}
+
 export function form() {
     return `
         <div style="text-align: center">

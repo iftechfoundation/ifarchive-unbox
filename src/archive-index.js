@@ -17,9 +17,11 @@ import fetch from 'node-fetch'
 import flow from 'xml-flow'
 
 export default class ArchiveIndex {
-    constructor(data_dir, options) {
-        this.data_dir = data_dir
+    constructor(data_dir, options, cache) {
+        this.cache = cache
+        this.data_path = path.join(data_dir, 'archive-data.json')
         this.etag = null
+        this.etag_path = path.join(data_dir, 'archive-etag.txt')
         this.hash_to_path = null
         this.options = options
         this.path_to_hash = null
@@ -28,7 +30,7 @@ export default class ArchiveIndex {
     async init() {
         // Try to load an old etag
         try {
-            this.etag = await fs.readFile(this.etag_path(), {encoding: 'utf8'})
+            this.etag = await fs.readFile(this.etag_path, {encoding: 'utf8'})
         }
         catch (_) {
             this.etag = null
@@ -37,7 +39,7 @@ export default class ArchiveIndex {
         await this.check_for_update()
         // Parse the stored data if we didn't update it just now
         if (!this.hash_to_path) {
-            const index_data = JSON.parse(await fs.readFile(this.data_path(), {encoding: 'utf8'}))
+            const index_data = JSON.parse(await fs.readFile(this.data_path, {encoding: 'utf8'}))
             this.update_maps(index_data)
         }
 
@@ -75,16 +77,19 @@ export default class ArchiveIndex {
         this.update_maps(index_data)
 
         // Write the new files
-        fs.writeFile(this.data_path(), JSON.stringify(index_data))
-        await fs.writeFile(this.etag_path(), new_etag)
-    }
+        fs.writeFile(this.data_path, JSON.stringify(index_data))
+        await fs.writeFile(this.etag_path, new_etag)
 
-    data_path() {
-        return path.join(this.data_dir, 'archive-data.json')
-    }
-
-    etag_path() {
-        return path.join(this.data_dir, 'archive-etag.txt')
+        // Purge the cache of old files
+        if (this.cache) {
+            const hash_to_date = new Map()
+            for (const file of index_data) {
+                const hash = file[0]
+                const date = file[2]
+                hash_to_date.set(hash, date)
+            }
+            await this.cache.purge(hash_to_date)
+        }
     }
 
     // Parse the Master-Index.xml stream
@@ -99,7 +104,8 @@ export default class ArchiveIndex {
                     // Trim if-archive/ from the beginning
                     const path = file.path.replace(/^if-archive\//, '')
                     const hash = parseInt(crypto.createHash('sha512').update(path).digest('hex').substring(0, 12), 16)
-                    data.push([hash, path])
+                    const date = +(new Date(file.date))
+                    data.push([hash, path, date])
                 }
             })
 

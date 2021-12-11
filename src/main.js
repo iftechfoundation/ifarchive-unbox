@@ -12,11 +12,16 @@ https://github.com/curiousdannii/ifarchive-unbox
 import fs from 'fs/promises'
 import path from 'path'
 
-import app from './app.js'
+import UnboxApp from './app.js'
 import ArchiveIndex from './archive-index.js'
+import FileCache from './cache.js'
 
 const default_options = {
     archive_domain: 'ifarchive.org',
+    cache: {
+        max_entries: 1000,
+        max_size: 1000000000, // 1 GB
+    },
     index: {
         recheck_period: 21600000, // Every 6 hours
         index_url: 'https://ifarchive.org/indexes/Master-Index.xml',
@@ -39,10 +44,17 @@ async function main() {
         options = Object.assign({}, default_options)
     }
 
-    // Create and initialise the archive index module
-    const index = new ArchiveIndex(data_dir, options)
-    await index.init()
+    // Create and initialise the file cache
+    const cache = new FileCache(data_dir, options)
+    await cache.init()
 
+    // Create and initialise the archive index module
+    const index = new ArchiveIndex(data_dir, options, cache)
+    await index.init()
+    cache.index = index
+
+    // Start the server
+    const app = new UnboxApp(options, cache, index)
     app.listen(port)
 }
 
