@@ -50,3 +50,13 @@ export function form() {
             </form>
         </div>`
 }
+
+export function list(name, hash, contents) {
+    return `
+        <div style="text-align: center">
+            <h2>Contents of ${name}</h2>
+            <div style="display: inline-block; margin: 0 auto; text-align: left">
+                <ul>${contents.map(file => `<li><a href="${hash}/${file}">${file}</a></li>`).join('\n')}</ul>
+            </div>
+        </div>`
+}

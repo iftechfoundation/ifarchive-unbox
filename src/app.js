@@ -9,6 +9,7 @@ https://github.com/curiousdannii/ifarchive-unbox
 
 */
 
+import path from 'path'
 import Koa from 'koa'
 
 import * as templates from './templates.js'
@@ -35,11 +36,11 @@ export default class UnboxApp {
     async router(ctx) {
         try {
             //const method = ctx.method
-            const path = ctx.path
+            const url_path = ctx.path
             const query = ctx.query
 
             // Front page
-            if (path === '/') {
+            if (url_path === '/') {
                 if (!query.url) {
                     ctx.body = templates.wrapper(templates.form())
                     return
@@ -52,14 +53,17 @@ export default class UnboxApp {
                     return
                 }
 
-                const path = query.url.replace(valid_origins, '').replace(/^if-archive\//, '')
-                const hash = this.index.path_to_hash.get(path)
+                const file_path = query.url.replace(valid_origins, '').replace(/^if-archive\//, '')
+                const hash = this.index.path_to_hash.get(file_path)
                 if (!hash) {
                     this.error(ctx, `Unknown file: ${query.url}`)
                     return
                 }
 
                 let details = await this.cache.get(hash)
+
+                // Show the list of files
+                ctx.body = templates.wrapper(templates.list(path.basename(file_path), hash.toString(36), details.contents))
             }
         }
         catch (err) {

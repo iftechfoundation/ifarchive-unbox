@@ -74,25 +74,7 @@ export default class FileCache {
         this.size += size
 
         // Get the files inside
-        const contents = []
-        if (/\.zip/i.test(url)) {
-            const zip_contents = await execFile('unzip', ['-l', cache_path])
-            if (zip_contents.stderr) {
-                throw new Error(`unzip error: ${details.error}`)
-            }
-            const lines = zip_contents.stdout.trim().split('\n').slice(3, -2)
-            for (const line of lines) {
-                const matched = /^\s+(\d+)\s+[0-9-]+\s+[0-9:]+\s+(\w.+)$/.exec(line)
-                const size = parseInt(matched[1], 10)
-                const path = matched[2]
-                if (size) {
-                    contents.push(path)
-                }
-            }
-        }
-        else {
-            throw new Error('Other archive format not yet supported')
-        }
+        const contents = await this.list_contents(url, cache_path)
 
         // Update the cache
         const entry = new CacheEntry(contents, +date, size)
@@ -118,6 +100,31 @@ export default class FileCache {
         const oldpos = this.lru.indexOf(hash)
         this.lru.splice(oldpos, 1)
         this.lru.unshift(hash)
+    }
+
+    // List the contents of a zip
+    async list_contents(url, path) {
+        const contents = []
+        if (/\.zip/i.test(url)) {
+            const zip_contents = await execFile('unzip', ['-l', path])
+            if (zip_contents.stderr) {
+                throw new Error(`unzip error: ${details.error}`)
+            }
+            const lines = zip_contents.stdout.trim().split('\n').slice(3, -2)
+            for (const line of lines) {
+                const matched = /^\s+(\d+)\s+[0-9-]+\s+[0-9:]+\s+(\w.+)$/.exec(line)
+                const size = parseInt(matched[1], 10)
+                const file_path = matched[2]
+                if (size) {
+                    contents.push(file_path)
+                }
+            }
+        }
+        else {
+            throw new Error('Other archive format not yet supported')
+        }
+        contents.sort()
+        return contents
     }
 
     // Purge out of date files
