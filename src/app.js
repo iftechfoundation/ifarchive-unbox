@@ -87,6 +87,7 @@ export default class UnboxApp {
 
             // Pipe the unzipped file to body
             ctx.type = path.extname(file_path)
+            ctx.set('Access-Control-Allow-Origin', '*');
             ctx.body = this.cache.get_file(hash, file_path, details.type)
         }
         catch (err) {
