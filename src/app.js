@@ -39,6 +39,9 @@ export default class UnboxApp {
             const request_path = ctx.path
             const query = ctx.query
 
+            // Solve CORS issues
+            ctx.set('Access-Control-Allow-Origin', '*')
+
             // Front page
             if (request_path === '/') {
                 if (!query.url) {
