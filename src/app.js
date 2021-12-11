@@ -53,7 +53,6 @@ export default class UnboxApp {
                 const valid_origins = /^https?:\/\/(mirror\.|www\.)?ifarchive\.org\//
                 if (!valid_origins.test(query.url)) {
                     throw new Error(`Sorry, we don't support files from outside the IF Archive`)
-                    return
                 }
 
                 const file_path = query.url.replace(valid_origins, '').replace(/^if-archive\//, '')
@@ -63,6 +62,19 @@ export default class UnboxApp {
                 }
 
                 const details = await this.cache.get(hash)
+
+                // Search for a file
+                if (query.find) {
+                    const candidates = details.contents.filter(file => file.endsWith(query.find))
+                    if (candidates.length > 1) {
+                        throw new Error('Multiple matching files')
+                    }
+                    if (candidates.length === 0) {
+                        throw new Error('No matching file')
+                    }
+                    ctx.redirect(`/${hash.toString(36)}/${candidates[0]}`)
+                    return
+                }
 
                 // Show the list of files
                 ctx.body = templates.wrapper(templates.list(path.basename(file_path), hash.toString(36), details.contents))

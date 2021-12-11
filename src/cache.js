@@ -53,7 +53,7 @@ export default class FileCache {
         const cache_path = path.join(this.cache_dir, hash.toString(36))
         const details = await execFile('curl', [url, '-o', cache_path, '-s', '-S', '-D', '-'])
         if (details.stderr) {
-            throw new Error(`curl error: ${details.error}`)
+            throw new Error(`curl error: ${details.stderr}`)
         }
 
         // Parse the date
@@ -67,7 +67,7 @@ export default class FileCache {
         const pad = num => num.toString().padStart(2, '0')
         const touch = await execFile('touch', ['-t', `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}0000`, cache_path])
         if (touch.stderr) {
-            throw new Error(`touch error: ${touch.error}`)
+            throw new Error(`touch error: ${touch.stderr}`)
         }
 
         // Get the file size
@@ -124,7 +124,7 @@ export default class FileCache {
         if (type === 'zip') {
             const zip_contents = await execFile('unzip', ['-l', path])
             if (zip_contents.stderr) {
-                throw new Error(`unzip error: ${details.error}`)
+                throw new Error(`unzip error: ${zip_contents.stderr}`)
             }
             const lines = zip_contents.stdout.trim().split('\n').slice(3, -2)
             for (const line of lines) {

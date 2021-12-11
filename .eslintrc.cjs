@@ -10,13 +10,13 @@ module.exports = {
     },
     root: true,
     rules: {
-        eqeqeq: ['error', 'always', {'null': 'ignore'}],
-        indent: ['error', 4, {'MemberExpression': 'off'}],
+        eqeqeq: ['error', 'always', {null: 'ignore'}],
+        indent: ['error', 4, {MemberExpression: 'off'}],
         'linebreak-style': ['error', 'unix'],
         'no-empty': ['off'],
         'no-var': ['error'],
-        'prefer-const': ['error', {'destructuring': 'all'}],
-        quotes: ['error', 'single'],
+        'prefer-const': ['error', {destructuring: 'all'}],
+        quotes: ['error', 'single', {allowTemplateLiterals: true, avoidEscape: true}],
         semi: ['error', 'never'],
     },
 }
