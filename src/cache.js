@@ -22,10 +22,11 @@ import util from 'util'
 const execFile = util.promisify(child_process.execFile)
 
 class CacheEntry {
-    constructor (contents, date, size) {
+    constructor (contents, date, size, type) {
         this.contents = contents
         this.date = date
         this.size = size
+        this.type = type
     }
 }
 
@@ -74,10 +75,14 @@ export default class FileCache {
         this.size += size
 
         // Get the files inside
-        const contents = await this.list_contents(url, cache_path)
+        let type = null
+        if (/\.zip/i.test(url)) {
+            type = 'zip'
+        }
+        const contents = await this.list_contents(cache_path, type)
 
         // Update the cache
-        const entry = new CacheEntry(contents, +date, size)
+        const entry = new CacheEntry(contents, +date, size, type)
         this.cache.set(hash, entry)
         return entry
     }
@@ -95,6 +100,17 @@ export default class FileCache {
         return entry_promise
     }
 
+    // Get a file from a zip, returning a stream
+    get_file(hash, file_path, type) {
+        if (type === 'zip') {
+            const child = child_process.spawn('unzip', ['-p', path.join(this.cache_dir, hash.toString(36)), file_path])
+            return child.stdout
+        }
+        else {
+            throw new Error('Other archive format not yet supported')
+        }
+    }
+
     // Update the LRU list
     hit(hash) {
         const oldpos = this.lru.indexOf(hash)
@@ -103,9 +119,9 @@ export default class FileCache {
     }
 
     // List the contents of a zip
-    async list_contents(url, path) {
+    async list_contents(path, type) {
         const contents = []
-        if (/\.zip/i.test(url)) {
+        if (type === 'zip') {
             const zip_contents = await execFile('unzip', ['-l', path])
             if (zip_contents.stderr) {
                 throw new Error(`unzip error: ${details.error}`)
