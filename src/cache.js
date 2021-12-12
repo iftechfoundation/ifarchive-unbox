@@ -113,7 +113,7 @@ export default class FileCache {
     // Get a file from a zip, returning a stream
     get_file(hash, file_path, type) {
         const zip_path = path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
-        if (type == 'tar.gz') {
+        if (type === 'tar.gz') {
             const child = child_process.spawn('tar', ['-xOzf', zip_path, file_path])
             return child.stdout
         }
@@ -135,39 +135,25 @@ export default class FileCache {
 
     // List the contents of a zip
     async list_contents(path, type) {
-        const contents = []
-        if (type == 'tar.gz') {
+        let output
+        if (type === 'tar.gz') {
             const tarball_contents = await execFile('tar', ['-tf', path])
             if (tarball_contents.stderr) {
-                throw new Error(`unzip error: ${zip_contents.stderr}`)
+                throw new Error(`tar error: ${tarball_contents.stderr}`)
             }
-            const lines = tarball_contents.stdout.trim().split('\n')
-            for (const line of lines) {
-                if (!line.endsWith('/')) {
-                    contents.push(line)
-                }
-            }
+            output = tarball_contents.stdout
         }
         else if (type === 'zip') {
-            const zip_contents = await execFile('unzip', ['-l', path])
+            const zip_contents = await execFile('unzip', ['-Z1', path])
             if (zip_contents.stderr) {
                 throw new Error(`unzip error: ${zip_contents.stderr}`)
             }
-            const lines = zip_contents.stdout.trim().split('\n').slice(3, -2)
-            for (const line of lines) {
-                const matched = /^\s*(\d+)\s+[0-9-]+\s+[0-9:]+\s+(\w.+)$/.exec(line)
-                const size = parseInt(matched[1], 10)
-                const file_path = matched[2]
-                if (size) {
-                    contents.push(file_path)
-                }
-            }
+            output = zip_contents.stdout
         }
         else {
             throw new Error('Other archive format not yet supported')
         }
-        contents.sort()
-        return contents
+        return output.trim().split('\n').filter(line => !line.endsWith('/')).sort()
     }
 
     // Purge out of date files
