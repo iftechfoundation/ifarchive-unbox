@@ -113,7 +113,11 @@ export default class FileCache {
     // Get a file from a zip, returning a stream
     get_file(hash, file_path, type) {
         const zip_path = path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
-        if (type === 'zip') {
+        if (type == 'tar.gz') {
+            const child = child_process.spawn('tar', ['-xOzf', zip_path, file_path])
+            return child.stdout
+        }
+        else if (type === 'zip') {
             const child = child_process.spawn('unzip', ['-p', zip_path, file_path])
             return child.stdout
         }
@@ -132,7 +136,19 @@ export default class FileCache {
     // List the contents of a zip
     async list_contents(path, type) {
         const contents = []
-        if (type === 'zip') {
+        if (type == 'tar.gz') {
+            const tarball_contents = await execFile('tar', ['-tf', path])
+            if (tarball_contents.stderr) {
+                throw new Error(`unzip error: ${zip_contents.stderr}`)
+            }
+            const lines = tarball_contents.stdout.trim().split('\n')
+            for (const line of lines) {
+                if (!line.endsWith('/')) {
+                    contents.push(line)
+                }
+            }
+        }
+        else if (type === 'zip') {
             const zip_contents = await execFile('unzip', ['-l', path])
             if (zip_contents.stderr) {
                 throw new Error(`unzip error: ${zip_contents.stderr}`)
