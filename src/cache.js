@@ -128,7 +128,7 @@ export default class FileCache {
             }
             const lines = zip_contents.stdout.trim().split('\n').slice(3, -2)
             for (const line of lines) {
-                const matched = /^\s+(\d+)\s+[0-9-]+\s+[0-9:]+\s+(\w.+)$/.exec(line)
+                const matched = /^\s*(\d+)\s+[0-9-]+\s+[0-9:]+\s+(\w.+)$/.exec(line)
                 const size = parseInt(matched[1], 10)
                 const file_path = matched[2]
                 if (size) {

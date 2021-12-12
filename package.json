@@ -13,19 +13,10 @@
   },
   "devDependencies": {
     "eslint": "^8.4.1",
-    "jest": "^27.0.0",
-    "nodemon": "^2.0.15",
-    "supertest": "^6.0.0"
+    "nodemon": "^2.0.15"
   },
   "scripts": {
     "lint": "eslint src",
-    "start": "nodemon src/main.js",
-    "test": "jest --watchAll --verbose"
-  },
-  "jest": {
-    "testPathIgnorePatterns": [
-      "<rootDir>/node_modules/",
-      "<rootDir>/test/"
-    ]
+    "start": "nodemon src/main.js"
   }
 }

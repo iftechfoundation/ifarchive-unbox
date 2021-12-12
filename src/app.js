@@ -95,7 +95,7 @@ export default class UnboxApp {
             }
 
             const details = await this.cache.get(hash)
-            const file_path = path_parts[2]
+            const file_path = decodeURIComponent(path_parts[2])
             if (details.contents.indexOf(file_path) < 0) {
                 throw new Error(`${this.index.hash_to_path.get(hash)} does not contain file ${file_path}`)
             }
