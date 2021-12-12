@@ -165,6 +165,7 @@ export default class FileCache {
                 this.cache.delete(hash)
                 const oldpos = this.lru.indexOf(hash)
                 this.lru.splice(oldpos, 1)
+                this.size -= entry.size
                 await fs.rm(`${path.join(this.cache_dir, hash.toString(36))}.${entry.type}`)
             }
         }
