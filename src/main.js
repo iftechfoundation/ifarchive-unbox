@@ -26,13 +26,16 @@ const default_options = {
         recheck_period: 21600000, // Every 6 hours
         index_url: 'https://ifarchive.org/indexes/Master-Index.xml',
     },
-    supported_formats: /\.(tar\.gz|zip)$/,
+    supported_formats: /\.(tar\.gz|zip)$/i,
 }
 
 async function main() {
     // Process ENV
     const data_dir = process.env.DATA_DIR || path.join(process.cwd(), 'data')
     const port = process.env.PORT || 8080
+
+    // Make the data and cache directories
+    await fs.mkdir(path.join(data_dir, 'cache'), {recursive: true})
 
     // Load options
     const options_path = path.join(data_dir, 'options.json')
@@ -50,8 +53,8 @@ async function main() {
 
     // Create and initialise the archive index module
     const index = new ArchiveIndex(data_dir, options, cache)
-    await index.init()
     cache.index = index
+    await index.init()
 
     // Start the server
     const app = new UnboxApp(options, cache, index)

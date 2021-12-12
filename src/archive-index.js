@@ -40,7 +40,7 @@ export default class ArchiveIndex {
         // Parse the stored data if we didn't update it just now
         if (!this.hash_to_path) {
             const index_data = JSON.parse(await fs.readFile(this.data_path, {encoding: 'utf8'}))
-            this.update_maps(index_data)
+            await this.update_maps(index_data)
         }
 
         // Check again later
@@ -74,22 +74,11 @@ export default class ArchiveIndex {
         const index_data = await this.parse_xml(response.body)
 
         // Update our maps
-        this.update_maps(index_data)
+        await this.update_maps(index_data)
 
         // Write the new files
         fs.writeFile(this.data_path, JSON.stringify(index_data))
         await fs.writeFile(this.etag_path, new_etag)
-
-        // Purge the cache of old files
-        if (this.cache) {
-            const hash_to_date = new Map()
-            for (const file of index_data) {
-                const hash = file[0]
-                const date = file[2]
-                hash_to_date.set(hash, date)
-            }
-            await this.cache.purge(hash_to_date)
-        }
     }
 
     // Parse the Master-Index.xml stream
@@ -114,14 +103,19 @@ export default class ArchiveIndex {
     }
 
     // Update the maps
-    update_maps(data) {
+    async update_maps(data) {
+        const hash_to_date = new Map()
         this.hash_to_path = new Map()
         this.path_to_hash = new Map()
         for (const file of data) {
             const hash = file[0]
             const path = file[1]
+            const date = file[2]
+            hash_to_date.set(hash, date)
             this.hash_to_path.set(hash, path)
             this.path_to_hash.set(path, hash)
         }
+        // Purge the cache of old files
+        await this.cache.purge(hash_to_date)
     }
 }

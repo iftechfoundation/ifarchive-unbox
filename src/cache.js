@@ -43,14 +43,32 @@ export default class FileCache {
     }
 
     async init() {
-        // TODO reload the cache from disk
+        // Get all the files currently in the cache directory
+        const files = await fs.readdir(this.cache_dir)
+
+        // Add them into the cache
+        await Promise.all(files.map(async file => {
+            const file_path = path.join(this.cache_dir, file)
+            const parts = /(\w+)\.(.+)/.exec(file)
+            const hash = parseInt(parts[1], 36)
+            const stat = await fs.stat(file_path)
+            const date = +stat.mtime
+            const size = stat.size
+            const type = parts[2]
+            const contents = await this.list_contents(file_path, type)
+            const entry = new CacheEntry(contents, date, size, type)
+            this.cache.set(hash, entry)
+            this.lru.push(hash)
+            this.size += size
+        }))
     }
 
     // Download and set up a cache entry
     async download(hash) {
         // Download the file with curl
         const url = `https://${this.options.archive_domain}/if-archive/${this.index.hash_to_path.get(hash)}`
-        const cache_path = path.join(this.cache_dir, hash.toString(36))
+        const type = this.options.supported_formats.exec(url)[1].toLowerCase()
+        const cache_path = path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
         const details = await execFile('curl', [url, '-o', cache_path, '-s', '-S', '-D', '-'])
         if (details.stderr) {
             throw new Error(`curl error: ${details.stderr}`)
@@ -64,21 +82,13 @@ export default class FileCache {
         const date = new Date(date_header[1])
 
         // Reset the file's date
-        const pad = num => num.toString().padStart(2, '0')
-        const touch = await execFile('touch', ['-t', `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}0000`, cache_path])
-        if (touch.stderr) {
-            throw new Error(`touch error: ${touch.stderr}`)
-        }
+        await fs.utimes(cache_path, date, date)
 
         // Get the file size
         const size = (await fs.stat(cache_path)).size
         this.size += size
 
         // Get the files inside
-        let type = null
-        if (/\.zip/i.test(url)) {
-            type = 'zip'
-        }
         const contents = await this.list_contents(cache_path, type)
 
         // Update the cache
@@ -102,8 +112,9 @@ export default class FileCache {
 
     // Get a file from a zip, returning a stream
     get_file(hash, file_path, type) {
+        const zip_path = path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
         if (type === 'zip') {
-            const child = child_process.spawn('unzip', ['-p', path.join(this.cache_dir, hash.toString(36)), file_path])
+            const child = child_process.spawn('unzip', ['-p', zip_path, file_path])
             return child.stdout
         }
         else {
@@ -148,11 +159,18 @@ export default class FileCache {
         for (const [hash, entry] of this.cache) {
             if (entry instanceof CacheEntry && entry.date !== data.get(hash))
             {
+                console.log(`Removing outdated cache file ${hash.toString(36)}.${entry.type} (${this.index.hash_to_path.get(hash)})`)
                 this.cache.delete(hash)
                 const oldpos = this.lru.indexOf(hash)
                 this.lru.splice(oldpos, 1)
-                await fs.rm(path.join(this.cache_dir, hash.toString(36)))
+                await fs.rm(`${path.join(this.cache_dir, hash.toString(36))}.${entry.type}`)
             }
+        }
+
+        // Check that we have the right number of cache entries
+        const files = await fs.readdir(this.cache_dir)
+        if (this.cache.size !== files.length || this.cache.size !== this.lru.length) {
+            console.warn(`Cache has inconsistent data: ${this.cache.size} entries, ${this.lru.length} LRU entries, ${files.length} files`)
         }
     }
 }
