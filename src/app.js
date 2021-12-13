@@ -82,7 +82,7 @@ export default class UnboxApp {
             }
 
             // Trying to load a file from a zip
-            const path_parts = /^\/([0-9a-zA-Z]+)\/(.+)$/.exec(request_path)
+            const path_parts = /^\/([0-9a-zA-Z]+)\/?(.*)$/.exec(request_path)
             if (!path_parts) {
                 throw new Error('This is not a valid file')
             }
@@ -90,8 +90,15 @@ export default class UnboxApp {
             if (!hash) {
                 throw new Error('This is not a valid file')
             }
-            if (!this.index.hash_to_path.has(hash)) {
+            const zip_path = this.index.hash_to_path.get(hash)
+            if (!zip_path) {
                 throw new Error(`Unknown file hash: ${path_parts[1]}`)
+            }
+
+            // Redirect folder views back to the index
+            if (path_parts[2] === '' || path_parts[2].endsWith('/')) {
+                ctx.redirect(`/?url=https://ifarchive.org/if-archive/${zip_path}`)
+                return
             }
 
             const details = await this.cache.get(hash)
