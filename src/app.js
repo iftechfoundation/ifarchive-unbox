@@ -76,6 +76,14 @@ export default class UnboxApp {
                     return
                 }
 
+                // Send and check the Last-Modified/If-Modified-Since headers
+                ctx.status = 200
+                ctx.lastModified = new Date(details.date)
+                if (ctx.fresh) {
+                    ctx.status = 304
+                    return
+                }
+
                 // Show the list of files
                 ctx.body = templates.wrapper(templates.list(path.basename(file_path), hash.toString(36), details.contents))
                 return
@@ -105,6 +113,14 @@ export default class UnboxApp {
             const file_path = decodeURIComponent(path_parts[2])
             if (details.contents.indexOf(file_path) < 0) {
                 throw new Error(`${this.index.hash_to_path.get(hash)} does not contain file ${file_path}`)
+            }
+
+            // Send and check the Last-Modified/If-Modified-Since headers
+            ctx.status = 200
+            ctx.lastModified = new Date(details.date)
+            if (ctx.fresh) {
+                ctx.status = 304
+                return
             }
 
             // Pipe the unzipped file to body

@@ -93,7 +93,7 @@ export default class ArchiveIndex {
                     // Trim if-archive/ from the beginning
                     const path = file.path.replace(/^if-archive\//, '')
                     const hash = parseInt(crypto.createHash('sha512').update(path).digest('hex').substring(0, 12), 16)
-                    const date = +(new Date(file.date))
+                    const date = +(new Date(`${file.date} UTC`))
                     data.push([hash, path, date])
                 }
             })

@@ -79,7 +79,7 @@ export default class FileCache {
         if (!date_header) {
             throw new Error('Could not parse last-modified header')
         }
-        const date = new Date(date_header[1])
+        const date = new Date(`${date_header[1]} UTC`)
 
         // Reset the file's date
         await fs.utimes(cache_path, date, date)
