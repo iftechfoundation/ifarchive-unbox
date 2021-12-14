@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: ./app
+    environment:
+      DATA_DIR: /home/data
+    ports:
+      - "8080:8080"
+    restart: always
+    volumes:
+      - data:/home/data
+
+volumes:
+  data:

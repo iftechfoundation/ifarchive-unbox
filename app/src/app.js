@@ -30,6 +30,7 @@ export default class UnboxApp {
     }
 
     listen(port) {
+        console.log(`Starting IF Archive Unboxing server on port ${port}`)
         this.app.listen(port)
     }
 
