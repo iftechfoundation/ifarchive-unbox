@@ -94,7 +94,27 @@ export default class FileCache {
         // Update the cache
         const entry = new CacheEntry(contents, +date, size, type)
         this.cache.set(hash, entry)
+
+        // Check the cache size
+        if (this.size > this.max_size) {
+            await this.evict()
+        }
         return entry
+    }
+
+    // Evict old entries to make space for new ones
+    async evict() {
+        while (this.lru.length > this.max_entries || this.size > this.max_size) {
+            const hash = this.lru.pop()
+            const entry = this.cache.get(hash)
+            this.cache.delete(hash)
+            this.size -= entry.size
+            await fs.rm(this.file_path(hash, entry.type))
+        }
+    }
+
+    file_path(hash, type) {
+        return path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
     }
 
     // Get a file out of the cache, or download it
@@ -107,12 +127,17 @@ export default class FileCache {
         this.lru.unshift(hash)
         const entry_promise = this.download(hash)
         this.cache.set(hash, entry_promise)
+
+        // Check the cache length
+        if (this.lru.length > this.max_entries) {
+            await this.evict()
+        }
         return entry_promise
     }
 
     // Get a file from a zip, returning a stream
     get_file(hash, file_path, type) {
-        const zip_path = path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
+        const zip_path = this.file_path(hash, type)
         if (type === 'tar.gz') {
             const child = child_process.spawn('tar', ['-xOzf', zip_path, file_path])
             return child.stdout
@@ -166,7 +191,7 @@ export default class FileCache {
                 const oldpos = this.lru.indexOf(hash)
                 this.lru.splice(oldpos, 1)
                 this.size -= entry.size
-                await fs.rm(`${path.join(this.cache_dir, hash.toString(36))}.${entry.type}`)
+                await fs.rm(this.file_path(hash, entry.type))
             }
         }
 

@@ -39,13 +39,12 @@ async function main() {
 
     // Load options
     const options_path = path.join(data_dir, 'options.json')
-    let options
+    let options_json = '{}'
     try {
-        options = Object.assign({}, default_options, JSON.parse(await fs.readFile(options_path, {encoding: 'utf8'})))
+        options_json = await fs.readFile(options_path, {encoding: 'utf8'})
     }
-    catch (_) {
-        options = Object.assign({}, default_options)
-    }
+    catch (_) {}
+    const options = Object.assign({}, default_options, JSON.parse(options_json))
 
     // Create and initialise the file cache
     const cache = new FileCache(data_dir, options)
