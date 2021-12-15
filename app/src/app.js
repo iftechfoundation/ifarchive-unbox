@@ -88,6 +88,12 @@ export default class UnboxApp {
                 // Show the list of files
                 ctx.body = templates.wrapper(templates.list(file_path, hash.toString(36), details.contents), `${path.basename(file_path)} - `)
                 return
+            } else if (request_path === '/proxy.pac') {
+                // serve a proxy.pac file for testing *.localhost wildcard domains
+                ctx.status = 200
+                ctx.type = 'application/x-ns-proxy-autoconfig'
+                ctx.body = `function FindProxyForURL(url, host) { if (shExpMatch(host, "*localhost")) { return "PROXY localhost:80" } return "DIRECT" }`
+                return
             }
 
             // Trying to load a file from a zip
