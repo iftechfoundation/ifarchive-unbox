@@ -12,11 +12,10 @@
     "xml-flow": "^1.0.4"
   },
   "devDependencies": {
-    "eslint": "^8.4.1",
-    "nodemon": "^2.0.15"
+    "eslint": "^8.4.1"
   },
   "scripts": {
     "lint": "eslint src",
-    "start": "nodemon src/main.js"
+    "start": "node src/main.js"
   }
 }

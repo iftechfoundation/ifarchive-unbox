@@ -5,7 +5,7 @@ Process the IF Archive's index
 
 Copyright (c) 2021 Dannii Willis
 MIT licenced
-https://github.com/curiousdannii/ifarchive-unbox
+https://github.com/iftechfoundation/ifarchive-unbox
 
 */
 

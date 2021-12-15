@@ -5,7 +5,7 @@ IF Archive Unboxing server
 
 Copyright (c) 2021 Dannii Willis
 MIT licenced
-https://github.com/curiousdannii/ifarchive-unbox
+https://github.com/iftechfoundation/ifarchive-unbox
 
 */
 
@@ -25,7 +25,7 @@ export default class UnboxApp {
     }
 
     error(ctx, msg) {
-        ctx.body = templates.wrapper(templates.error(msg))
+        ctx.body = templates.wrapper(templates.error(msg), '')
         ctx.status = 400
     }
 
@@ -46,7 +46,7 @@ export default class UnboxApp {
             // Front page
             if (request_path === '/') {
                 if (!query.url) {
-                    ctx.body = templates.wrapper(templates.form())
+                    ctx.body = templates.wrapper(templates.form(), '')
                     return
                 }
 
@@ -86,7 +86,7 @@ export default class UnboxApp {
                 }
 
                 // Show the list of files
-                ctx.body = templates.wrapper(templates.list(path.basename(file_path), hash.toString(36), details.contents))
+                ctx.body = templates.wrapper(templates.list(file_path, hash.toString(36), details.contents), `${path.basename(file_path)} - `)
                 return
             }
 
@@ -113,7 +113,7 @@ export default class UnboxApp {
             const details = await this.cache.get(hash)
             const file_path = decodeURIComponent(path_parts[2])
             if (details.contents.indexOf(file_path) < 0) {
-                throw new Error(`${this.index.hash_to_path.get(hash)} does not contain file ${file_path}`)
+                throw new Error(`${zip_path} does not contain file ${file_path}`)
             }
 
             // Send and check the Last-Modified/If-Modified-Since headers
