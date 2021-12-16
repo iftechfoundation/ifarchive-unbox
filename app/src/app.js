@@ -180,7 +180,7 @@ export default class UnboxApp {
         }
 
         // Check for non-matching subdomain
-        if (ctx.subdomains[0] !== hash_string) {
+        if (this.options.subdomains && UNSAFE_FILES.test(file_path) && !ctx.hostname.startsWith(hash_string)) {
             ctx.throw(400, `Incorrect subdomain`)
         }
 
