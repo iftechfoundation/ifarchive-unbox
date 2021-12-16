@@ -67,12 +67,9 @@ export default class UnboxApp {
                 if (subdomain_count === 0 && UNSAFE_FILES.test(path)) {
                     const path_parts = PATH_PARTS.exec(path)
                     if (path_parts) {
-                        const hash = parseInt(path_parts[1], 36)
-                        if (hash) {
-                            ctx.status = 301
-                            ctx.redirect(`//${path_parts[1]}.${domain}${path}`)
-                            return
-                        }
+                        ctx.status = 301
+                        ctx.redirect(`//${path_parts[1]}.${domain}${path}`)
+                        return
                     }
                 }
 
@@ -81,7 +78,7 @@ export default class UnboxApp {
         }
 
         // Serve a proxy.pac file
-        if (domain || options.serve_proxy_pac) {
+        if (domain && options.serve_proxy_pac) {
             this.app.use(async (ctx, next) => {
                 if (ctx.path === '/proxy.pac') {
                     // serve a proxy.pac file for testing *.localhost wildcard domains
@@ -164,9 +161,6 @@ export default class UnboxApp {
         }
         const hash_string = path_parts[1]
         const hash = parseInt(hash_string, 36)
-        if (!hash) {
-            ctx.throw(400, 'This is not a valid file')
-        }
         const zip_path = this.index.hash_to_path.get(hash)
         if (!zip_path) {
             ctx.throw(400, `Unknown file hash: ${hash_string}`)
