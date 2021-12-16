@@ -14,6 +14,10 @@ import Koa from 'koa'
 
 import * as templates from './templates.js'
 
+const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
+const UNSAFE_FILES = /\.(html?|svg)$/i
+const VALID_ORIGINS = /^https?:\/\/(mirror\.|www\.)?ifarchive\.org\//
+
 export default class UnboxApp {
     constructor(options, cache, index) {
         this.cache = cache
@@ -23,6 +27,7 @@ export default class UnboxApp {
         const domain = options.domain
 
         this.app = new Koa()
+        this.app.subdomainOffset = domain.split('.').length
 
         // Add the layers
 
@@ -39,6 +44,41 @@ export default class UnboxApp {
                 }
             }
         })
+
+        // Redirect to subdomains
+        if (domain && options.subdomains) {
+            this.app.use(async (ctx, next) => {
+                const path = ctx.path
+                const subdomain_count = ctx.subdomains.length
+
+                // Too many subdomains
+                if (subdomain_count > 1) {
+                    ctx.throw(400, 'Too many subdomains')
+                }
+
+                // Safe file on non-subdomain
+                if (subdomain_count === 1 && !UNSAFE_FILES.test(path)) {
+                    ctx.status = 301
+                    ctx.redirect(`//${domain}${path}`)
+                    return
+                }
+
+                // Unsafe file on main domain
+                if (subdomain_count === 0 && UNSAFE_FILES.test(path)) {
+                    const path_parts = PATH_PARTS.exec(path)
+                    if (path_parts) {
+                        const hash = parseInt(path_parts[1], 36)
+                        if (hash) {
+                            ctx.status = 301
+                            ctx.redirect(`//${path_parts[1]}.${domain}${path}`)
+                            return
+                        }
+                    }
+                }
+
+                await next()
+            })
+        }
 
         // Serve a proxy.pac file
         if (domain || options.serve_proxy_pac) {
@@ -78,12 +118,11 @@ export default class UnboxApp {
             }
 
             // Normalise URLs
-            const valid_origins = /^https?:\/\/(mirror\.|www\.)?ifarchive\.org\//
-            if (!valid_origins.test(query.url)) {
+            if (!VALID_ORIGINS.test(query.url)) {
                 ctx.throw(400, `Sorry, we don't support files from outside the IF Archive`)
             }
 
-            const file_path = query.url.replace(valid_origins, '').replace(/^if-archive\//, '')
+            const file_path = query.url.replace(VALID_ORIGINS, '').replace(/^if-archive\//, '')
             const hash = this.index.path_to_hash.get(file_path)
             if (!hash) {
                 ctx.throw(400, `Unknown file: ${query.url}`)
@@ -119,30 +158,36 @@ export default class UnboxApp {
         }
 
         // Trying to load a file from a zip
-        const path_parts = /^\/([0-9a-zA-Z]+)\/?(.*)$/.exec(request_path)
+        const path_parts = PATH_PARTS.exec(request_path)
         if (!path_parts) {
             ctx.throw(400, 'This is not a valid file')
         }
-        const hash = parseInt(path_parts[1], 36)
+        const hash_string = path_parts[1]
+        const hash = parseInt(hash_string, 36)
         if (!hash) {
             ctx.throw(400, 'This is not a valid file')
         }
         const zip_path = this.index.hash_to_path.get(hash)
         if (!zip_path) {
-            ctx.throw(400, `Unknown file hash: ${path_parts[1]}`)
+            ctx.throw(400, `Unknown file hash: ${hash_string}`)
         }
 
         // Redirect folder views back to the index
-        if (path_parts[2] === '' || path_parts[2].endsWith('/')) {
+        const file_path = decodeURIComponent(path_parts[2])
+        if (file_path === '' || file_path.endsWith('/')) {
             ctx.status = 301
             ctx.redirect(`/?url=https://ifarchive.org/if-archive/${zip_path}`)
             return
         }
 
         const details = await this.cache.get(hash)
-        const file_path = decodeURIComponent(path_parts[2])
         if (details.contents.indexOf(file_path) < 0) {
             ctx.throw(400, `${zip_path} does not contain file ${file_path}`)
+        }
+
+        // Check for non-matching subdomain
+        if (ctx.subdomains[0] !== hash_string) {
+            ctx.throw(400, `Incorrect subdomain`)
         }
 
         // Send and check the Last-Modified/If-Modified-Since headers
