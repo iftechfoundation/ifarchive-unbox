@@ -44,7 +44,7 @@ export function error(msg) {
 export function form() {
     return `
         <div style="text-align: center">
-            <p>Enter a URL from a zip file from the <a href="https://ifarchive.org/">IF Archive</a> to begin:</p>
+            <p>Enter the URL of a zip file from the <a href="https://ifarchive.org/">IF Archive</a> to begin:</p>
             <form action="/" method="get">
                 <p><input style="font-size: 175%" type="text" name="url"> <button style="font-size: 175%" type="submit">Submit</button></p>
             </form>
