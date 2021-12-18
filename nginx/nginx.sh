@@ -11,6 +11,11 @@ if [ -f "$OPTIONS_FILE" ]; then
     SUBDOMAINS=$(jq -r '.subdomains? // false' $OPTIONS_FILE)
 fi
 
+# Common gzip settings
+GZIP="gzip on;
+    gzip_proxied any;
+    gzip_types *;"
+
 # Top server
 if [ -n "$DOMAIN" ]; then
     SERVER_NAME="server_name $DOMAIN;"
@@ -20,6 +25,8 @@ server {
     listen 80;
     listen [::]:80;
     $SERVER_NAME
+
+    $GZIP
 
     location / {
         proxy_pass http://app:8080;
@@ -39,6 +46,8 @@ server {
     listen 80;
     listen [::]:80;
     server_name *.${DOMAIN};
+
+    $GZIP
 
     proxy_cache cache;
 
