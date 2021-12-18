@@ -27,7 +27,6 @@ export default class UnboxApp {
         const domain = options.domain
 
         this.app = new Koa()
-        this.app.subdomainOffset = domain.split('.').length
 
         // Add the layers
 
@@ -47,6 +46,7 @@ export default class UnboxApp {
 
         // Redirect to subdomains
         if (domain && options.subdomains) {
+            this.app.subdomainOffset = domain.split('.').length
             this.app.use(async (ctx, next) => {
                 const path = ctx.path
                 const subdomain_count = ctx.subdomains.length

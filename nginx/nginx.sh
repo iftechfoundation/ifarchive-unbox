@@ -4,10 +4,12 @@ CONF_FILE=/etc/nginx/conf.d/default.conf
 OPTIONS_FILE=$DATA_DIR/options.json
 
 # Get values from options.json
-DOMAIN=$(jq -r '.domain? // ""' $OPTIONS_FILE)
-KEYS_SIZE=$(jq -r '.nginx?.cache?.keys_size? // 50' $OPTIONS_FILE)
-MAX_SIZE=$(jq -r '.nginx?.cache?.max_size? // 1000' $OPTIONS_FILE)
-SUBDOMAINS=$(jq -r '.subdomains? // false' $OPTIONS_FILE)
+if [ -f "$OPTIONS_FILE" ]; then
+    DOMAIN=$(jq -r '.domain? // ""' $OPTIONS_FILE)
+    KEYS_SIZE=$(jq -r '.nginx?.cache?.keys_size? // 50' $OPTIONS_FILE)
+    MAX_SIZE=$(jq -r '.nginx?.cache?.max_size? // 1000' $OPTIONS_FILE)
+    SUBDOMAINS=$(jq -r '.subdomains? // false' $OPTIONS_FILE)
+fi
 
 # Top server
 if [ -n "$DOMAIN" ]; then
