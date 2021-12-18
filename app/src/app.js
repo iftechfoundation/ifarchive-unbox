@@ -15,7 +15,7 @@ import Koa from 'koa'
 import * as templates from './templates.js'
 
 const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
-const UNSAFE_FILES = /\.(html?|svg)$/i
+const UNSAFE_FILES = templates.UNSAFE_FILES
 const VALID_ORIGINS = /^https?:\/\/(mirror\.|www\.)?ifarchive\.org\//
 
 export default class UnboxApp {
@@ -45,7 +45,7 @@ export default class UnboxApp {
         })
 
         // Redirect to subdomains
-        if (domain && options.subdomains) {
+        if (options.subdomains) {
             this.app.subdomainOffset = domain.split('.').length
             this.app.use(async (ctx, next) => {
                 const path = ctx.path
@@ -134,7 +134,8 @@ export default class UnboxApp {
             if (query.find) {
                 const candidates = details.contents.filter(file => file.endsWith(query.find))
                 if (candidates.length > 1) {
-                    ctx.throw(400, 'Multiple matching files')
+                    ctx.body = templates.wrapper(templates.list(`Files matching ${query.find} in`, file_path, hash.toString(36), candidates, this.options.domain, this.options.subdomains), `${path.basename(file_path)} - `)
+                    return
                 }
                 if (candidates.length === 0) {
                     ctx.throw(400, 'No matching file')
@@ -153,7 +154,7 @@ export default class UnboxApp {
             }
 
             // Show the list of files
-            ctx.body = templates.wrapper(templates.list(file_path, hash.toString(36), details.contents), `${path.basename(file_path)} - `)
+            ctx.body = templates.wrapper(templates.list('Contents of', file_path, hash.toString(36), details.contents, this.options.domain, this.options.subdomains), `${path.basename(file_path)} - `)
             return
         }
 

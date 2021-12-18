@@ -9,12 +9,20 @@ https://github.com/iftechfoundation/ifarchive-unbox
 
 */
 
+import {escape} from 'lodash-es'
+
+export const UNSAFE_FILES = /\.(html?|svg)$/i
+
+function percent(path) {
+    return escape(path).replaceAll('?', '%3F')
+}
+
 export function wrapper(content, title) {
     return `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <title>${title}IF Archive Unboxing Service</title>
+    <title>${escape(title)}IF Archive Unboxing Service</title>
     <link rel="stylesheet" href="https://ifarchive.org/misc/ifarchive.css">
 </head>
 <body>
@@ -37,7 +45,7 @@ export function wrapper(content, title) {
 export function error(msg) {
     return `
         <div style="text-align: center">
-            <p><b>Error:</b> <pre style="font-size: 1.4em">${msg}</pre></p>
+            <p><b>Error:</b> <pre style="font-size: 1.4em">${escape(msg)}</pre></p>
         </div>`
 }
 
@@ -51,12 +59,13 @@ export function form() {
         </div>`
 }
 
-export function list(path, hash, contents) {
+export function list(label, path, hash, contents, domain, subdomains) {
+    const listcontents = contents.map(file => `<li><a href="${subdomains && UNSAFE_FILES.test(file) ? `//${hash}.${domain}` : ''}/${hash}/${percent(file)}">${escape(file)}</a></li>`).join('\n')
     return `
         <div style="text-align: center">
-            <h2>Contents of <a href="https://ifarchive.org/if-archive/${path}">${path}</a></h2>
+            <h2>${escape(label)} <a href="https://ifarchive.org/if-archive/${path}">${escape(path)}</a></h2>
             <div style="display: inline-block; margin: 0 auto; text-align: left">
-                <ul>${contents.map(file => `<li><a href="/${hash}/${file}">${file}</a></li>`).join('\n')}</ul>
+                <ul>${listcontents}</ul>
             </div>
         </div>`
 }

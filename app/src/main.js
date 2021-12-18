@@ -50,6 +50,11 @@ async function main() {
     catch (_) {}
     const options = Object.assign({}, default_options, JSON.parse(options_json))
 
+    // If no domain option, then disable subdomains
+    if (!options.domain) {
+        options.subdomains = false
+    }
+
     // Create and initialise the file cache
     const cache = new FileCache(data_dir, options)
     await cache.init()
