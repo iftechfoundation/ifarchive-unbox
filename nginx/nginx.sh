@@ -62,6 +62,8 @@ EOF
 fi;
 
 # Log the contructed config file
+echo Constructed $CONF_FILE
 cat $CONF_FILE
 
-nginx -g 'daemon off;'
+# Invoke the Nginx image's startup script
+/docker-entrypoint.sh "$@"

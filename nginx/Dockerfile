@@ -2,8 +2,8 @@ FROM nginx:mainline-alpine
 
 RUN apk add --no-cache jq
 
-WORKDIR /home/nginx
+COPY nginx.sh /
 
-COPY . .
+ENTRYPOINT ["/nginx.sh"]
 
-ENTRYPOINT ["./nginx.sh"]
+CMD ["nginx", "-g", "daemon off;"]
