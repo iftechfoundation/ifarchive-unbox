@@ -25,7 +25,7 @@ LISTEN="listen 80;
 # Erase the conf file
 > $CONF_FILE
 
-# Top server
+# Handle HTTPS
 if [ -n "$DOMAIN" ]; then
     SERVER_NAME="server_name $DOMAIN;"
 
@@ -52,6 +52,7 @@ EOF
     fi
 fi
 
+# Top domain server
 cat >> $CONF_FILE <<EOF
 server {
     $LISTEN

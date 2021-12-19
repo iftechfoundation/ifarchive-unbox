@@ -69,7 +69,7 @@ export default class FileCache {
         const url = `https://${this.options.archive_domain}/if-archive/${this.index.hash_to_path.get(hash)}`
         const type = this.options.supported_formats.exec(url)[1].toLowerCase()
         const cache_path = path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
-        const details = await execFile('curl', [url, '-o', cache_path, '-s', '-S', '-D', '-'])
+        const details = await execFile('curl', [encodeURI(url), '-o', cache_path, '-s', '-S', '-D', '-'])
         if (details.stderr) {
             throw new Error(`curl error: ${details.stderr}`)
         }
