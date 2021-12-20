@@ -9,6 +9,7 @@ https://github.com/iftechfoundation/ifarchive-unbox
 
 */
 
+import child_process from 'child_process'
 import path from 'path'
 import Koa from 'koa'
 
@@ -17,6 +18,12 @@ import * as templates from './templates.js'
 const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
 const UNSAFE_FILES = templates.UNSAFE_FILES
 const VALID_ORIGINS = /^https?:\/\/(mirror\.|www\.)?ifarchive\.org\//
+
+const TYPES_TO_DETECT_BETTER = [
+    'application/octet-stream',
+    'text/html',
+    'text/plain',
+]
 
 export default class UnboxApp {
     constructor(options, cache, index) {
@@ -196,8 +203,33 @@ export default class UnboxApp {
             return
         }
 
-        // Pipe the unzipped file to body
+        // Try Koa's type detection
         ctx.type = path.extname(file_path)
-        ctx.body = this.cache.get_file(hash, file_path, details.type)
+        const mime_type = ctx.type
+        // Try to get a more accurate file type and encoding
+        if (!mime_type || TYPES_TO_DETECT_BETTER.includes(mime_type)) {
+            const data = await this.cache.get_file(hash, file_path, details.type)
+            const new_type = await get_file_type(data)
+            ctx.type = new_type
+            ctx.body = data
+        }
+        else {
+            // Pipe the unzipped file to body
+            ctx.body = this.cache.get_file_stream(hash, file_path, details.type)
+        }
     }
+}
+
+// Use the file command to try to get a more accurate file type
+async function get_file_type(buf) {
+    return new Promise((resolve, reject) => {
+        const child = child_process.spawn('file', ['-i', '-'])
+        child.stdin.end(buf)
+        child.once('exit', (code) => {
+            if (code) {
+                return reject(new Error(child.stderr.read().toString()))
+            }
+            return resolve(child.stdout.read().toString().trim().replace('/dev/stdin: ', ''))
+        })
+    })
 }

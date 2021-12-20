@@ -135,8 +135,30 @@ export default class FileCache {
         return entry_promise
     }
 
+    // Extract a file from a zip, returning a buffer
+    async get_file(hash, file_path, type) {
+        const zip_path = this.file_path(hash, type)
+        if (type === 'tar.gz') {
+            const results = await execFile('tar', ['-xOzf', zip_path, file_path], {encoding: 'buffer'})
+            if (results.stderr.length) {
+                throw new Error(`tar error: ${results.stderr.toString()}`)
+            }
+            return results.stdout
+        }
+        else if (type === 'zip') {
+            const results = await execFile('unzip', ['-p', zip_path, file_path], {encoding: 'buffer'})
+            if (results.stderr.length) {
+                throw new Error(`unzip error: ${results.stderr.toString()}`)
+            }
+            return results.stdout
+        }
+        else {
+            throw new Error('Other archive format not yet supported')
+        }
+    }
+
     // Get a file from a zip, returning a stream
-    get_file(hash, file_path, type) {
+    get_file_stream(hash, file_path, type) {
         const zip_path = this.file_path(hash, type)
         if (type === 'tar.gz') {
             const child = child_process.spawn('tar', ['-xOzf', zip_path, file_path])
