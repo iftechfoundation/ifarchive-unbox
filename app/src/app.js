@@ -154,6 +154,14 @@ export default class UnboxApp {
                 return
             }
 
+            // JSON
+            if ('json' in query) {
+                ctx.body = {
+                    files: details.contents
+                }
+                return
+            }
+
             // Show the list of files
             ctx.body = templates.wrapper(templates.list('Contents of', file_path, hash.toString(36), details.contents, this.options.domain, this.options.subdomains), `${path.basename(file_path)} - `)
             return
