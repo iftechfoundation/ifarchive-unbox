@@ -19,6 +19,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import util from 'util'
 
+const exec = util.promisify(child_process.exec)
 const execFile = util.promisify(child_process.execFile)
 
 class CacheEntry {
@@ -36,6 +37,7 @@ export default class FileCache {
         this.cache_dir = path.join(data_dir, 'cache')
         this.index = null
         this.lru = []
+        this.max_buffer = options.cache.max_buffer
         this.max_entries = options.cache.max_entries
         this.max_size = options.cache.max_size
         this.options = options
@@ -139,14 +141,14 @@ export default class FileCache {
     async get_file(hash, file_path, type) {
         const zip_path = this.file_path(hash, type)
         if (type === 'tar.gz') {
-            const results = await execFile('tar', ['-xOzf', zip_path, file_path], {encoding: 'buffer'})
+            const results = await execFile('tar', ['-xOzf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
             if (results.stderr.length) {
                 throw new Error(`tar error: ${results.stderr.toString()}`)
             }
             return results.stdout
         }
         else if (type === 'zip') {
-            const results = await execFile('unzip', ['-p', zip_path, file_path], {encoding: 'buffer'})
+            const results = await execFile('unzip', ['-p', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
             if (results.stderr.length) {
                 throw new Error(`unzip error: ${results.stderr.toString()}`)
             }
@@ -167,6 +169,28 @@ export default class FileCache {
         else if (type === 'zip') {
             const child = child_process.spawn('unzip', ['-p', zip_path, file_path])
             return child.stdout
+        }
+        else {
+            throw new Error('Other archive format not yet supported')
+        }
+    }
+
+    // Run file on an extracted file
+    async get_file_type(hash, file_path, type) {
+        const zip_path = this.file_path(hash, type)
+        if (type === 'tar.gz') {
+            const results = await exec(`tar -xOzf ${zip_path} "${file_path}" | file -i -`)
+            if (results.stderr.length) {
+                throw new Error(`tar|file error: ${results.stderr.toString()}`)
+            }
+            return results.stdout.trim().replace('/dev/stdin: ', '')
+        }
+        else if (type === 'zip') {
+            const results = await exec(`unzip -p ${zip_path} "${file_path}" | file -i -`)
+            if (results.stderr.length) {
+                throw new Error(`unzip|file error: ${results.stderr.toString()}`)
+            }
+            return results.stdout.trim().replace('/dev/stdin: ', '')
         }
         else {
             throw new Error('Other archive format not yet supported')

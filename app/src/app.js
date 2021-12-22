@@ -13,17 +13,11 @@ import child_process from 'child_process'
 import path from 'path'
 import Koa from 'koa'
 
+import {COMMON_FILE_TYPES, TYPES_TO_DETECT_BETTER, UNSAFE_FILES} from './defines.js'
 import * as templates from './templates.js'
 
 const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
-const UNSAFE_FILES = templates.UNSAFE_FILES
 const VALID_ORIGINS = /^https?:\/\/(mirror\.|www\.)?ifarchive\.org\//
-
-const TYPES_TO_DETECT_BETTER = [
-    'application/octet-stream',
-    'text/html',
-    'text/plain',
-]
 
 export default class UnboxApp {
     constructor(options, cache, index) {
@@ -203,33 +197,26 @@ export default class UnboxApp {
             return
         }
 
-        // Try Koa's type detection
-        ctx.type = path.extname(file_path)
-        const mime_type = ctx.type
-        // Try to get a more accurate file type and encoding
-        if (!mime_type || TYPES_TO_DETECT_BETTER.includes(mime_type)) {
-            const data = await this.cache.get_file(hash, file_path, details.type)
-            const new_type = await get_file_type(data)
-            ctx.type = new_type
-            ctx.body = data
+        // Type detection
+        // We define some file types for common extensions
+        const ext = path.extname(file_path).substring(1)
+        if (COMMON_FILE_TYPES[ext]) {
+            ctx.set('Content-Type', COMMON_FILE_TYPES[ext])
         }
+        // Or else use Koa's type detection
         else {
-            // Pipe the unzipped file to body
-            ctx.body = this.cache.get_file_stream(hash, file_path, details.type)
+            ctx.type = ext
         }
-    }
-}
 
-// Use the file command to try to get a more accurate file type
-async function get_file_type(buf) {
-    return new Promise((resolve, reject) => {
-        const child = child_process.spawn('file', ['-i', '-'])
-        child.stdin.end(buf)
-        child.once('exit', (code) => {
-            if (code) {
-                return reject(new Error(child.stderr.read().toString()))
-            }
-            return resolve(child.stdout.read().toString().trim().replace('/dev/stdin: ', ''))
-        })
-    })
+        // For certain types, try to get a more accurate file type and encoding
+        const mime_type = ctx.type
+        if (!mime_type || TYPES_TO_DETECT_BETTER.includes(mime_type)) {
+            const new_type = await this.cache.get_file_type(hash, file_path, details.type)
+            console.log(new_type)
+            ctx.type = new_type
+        }
+
+        // Pipe the unzipped file to body
+        ctx.body = this.cache.get_file_stream(hash, file_path, details.type)
+    }
 }

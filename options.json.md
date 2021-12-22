@@ -7,6 +7,7 @@ Here are all the options you can set in data/options.json
 {
     "archive_domain": "ifarchive.org",
     "cache": {
+        "max_buffer": 20000000,
         "max_entries": 1000,
         "max_size": 1000000000
     },
@@ -34,8 +35,11 @@ Here are all the options you can set in data/options.json
 }
 ```
 
+Note that if you want to set one of the object options, you may need to include all sub-options, not just the one you want to change.
+
 - archive_domain: (str) domain of the IF Archive to use for downloading files
 - cache: options for the app's cache
+  - max_buffer: (int bytes) buffer size to use when extracting to RAM
   - max_entries: (int) number of zip files to cache
   - max_size: (int bytes) amount of disk to use for the cache
 - cache-control-age: (int seconds) time to set for the Cache-Control header

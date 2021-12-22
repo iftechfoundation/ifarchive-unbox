@@ -19,6 +19,7 @@ import FileCache from './cache.js'
 const default_options = {
     archive_domain: 'ifarchive.org',
     cache: {
+        max_buffer: 20000000, // 20 MB
         max_entries: 1000,
         max_size: 1000000000, // 1 GB
     },
