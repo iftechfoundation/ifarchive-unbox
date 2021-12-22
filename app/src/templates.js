@@ -17,13 +17,14 @@ function percent(path) {
     return escape(path).replaceAll('?', '%3F')
 }
 
-export function wrapper(content, title) {
+export function wrapper(opts) {
     return `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <title>${escape(title)}IF Archive Unboxing Service</title>
+    <title>${opts.title ? `${escape(opts.title)} - `: ''}IF Archive Unboxing Service</title>
     <link rel="stylesheet" href="https://ifarchive.org/misc/ifarchive.css">
+    ${opts.canonical ? `<link rel="canonical" href="${opts.canonical}">` : ''}
 </head>
 <body>
     <div class="Page">
@@ -31,7 +32,7 @@ export function wrapper(content, title) {
             <h1><a href="/" style="text-decoration: none">IF Archive Unboxing Service</a></h1>
         </div>
 
-        ${content}
+        ${opts.content}
 
         <div class="Footer">
             <p>The IF Archive is a public service of the <a href="https://iftechfoundation.org/">Interactive Fiction Technology Foundation</a>.</p>

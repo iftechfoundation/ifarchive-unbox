@@ -38,7 +38,9 @@ export default class UnboxApp {
             }
             catch (err) {
                 ctx.status = err.statusCode || err.status || 500
-                ctx.body = templates.wrapper(templates.error(err), '')
+                ctx.body = templates.wrapper({
+                    content: templates.error(err),
+                })
                 if (ctx.status !== 400) {
                     ctx.app.emit('error', err, ctx)
                 }
@@ -114,7 +116,9 @@ export default class UnboxApp {
         // Front page
         if (request_path === '/') {
             if (!query.url) {
-                ctx.body = templates.wrapper(templates.form(), '')
+                ctx.body = templates.wrapper({
+                    content: templates.form(),
+                })
                 return
             }
 
@@ -135,7 +139,11 @@ export default class UnboxApp {
             if (query.find) {
                 const candidates = details.contents.filter(file => file.endsWith(query.find))
                 if (candidates.length > 1) {
-                    ctx.body = templates.wrapper(templates.list(`Files matching ${query.find} in`, file_path, hash.toString(36), candidates, this.options.domain, this.options.subdomains), `${path.basename(file_path)} - `)
+                    ctx.body = templates.wrapper({
+                        canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}&find=${query.find}`,
+                        content: templates.list(`Files matching ${query.find} in`, file_path, hash.toString(36), candidates, this.options.domain, this.options.subdomains),
+                        title: path.basename(file_path),
+                    })
                     return
                 }
                 if (candidates.length === 0) {
@@ -163,7 +171,11 @@ export default class UnboxApp {
             }
 
             // Show the list of files
-            ctx.body = templates.wrapper(templates.list('Contents of', file_path, hash.toString(36), details.contents, this.options.domain, this.options.subdomains), `${path.basename(file_path)} - `)
+            ctx.body = templates.wrapper({
+                canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}`,
+                content: templates.list('Contents of', file_path, hash.toString(36), details.contents, this.options.domain, this.options.subdomains),
+                title: path.basename(file_path),
+            })
             return
         }
 
