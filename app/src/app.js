@@ -153,6 +153,7 @@ export default class UnboxApp {
             if (query.find) {
                 const candidates = details.contents.filter(file => file.endsWith(query.find))
                 if (candidates.length > 1) {
+                    ctx.status = 300
                     ctx.body = templates.wrapper({
                         canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}&find=${query.find}`,
                         content: templates.list(`Files matching ${query.find} in`, file_path, hash.toString(36), candidates, this.options.domain, this.options.subdomains),
