@@ -25,6 +25,8 @@ export default class ArchiveIndex {
         this.hash_to_path = null
         this.options = options
         this.path_to_hash = null
+        this.symlinked_dirs = null
+        this.symlinked_files = null
     }
 
     async init() {
@@ -37,11 +39,6 @@ export default class ArchiveIndex {
         }
 
         await this.check_for_update()
-        // Parse the stored data if we didn't update it just now
-        if (!this.hash_to_path) {
-            const index_data = JSON.parse(await fs.readFile(this.data_path, {encoding: 'utf8'}))
-            await this.update_maps(index_data)
-        }
 
         // Check again later
         setInterval(() => this.check_for_update(), this.options.index.recheck_period)
@@ -58,8 +55,18 @@ export default class ArchiveIndex {
             throw new Error('Master-Index.xml has no etag header')
         }
         if (this.etag === new_etag) {
-            console.log('ArchiveIndex: Master-Index.xml is unchanged')
-            return
+            if (this.hash_to_path) {
+                console.log('ArchiveIndex: Master-Index.xml is unchanged')
+                return
+            }
+            // Parse the stored data if we didn't update it just now
+            const index_data = JSON.parse(await fs.readFile(this.data_path, {encoding: 'utf8'}))
+            if (index_data.symlinks) {
+                console.log('ArchiveIndex: Loading stored data')
+                await this.update_maps(index_data)
+                return
+            }
+            console.log('ArchiveIndex: Stored data is in old format')
         }
 
         // A new etag!
@@ -84,30 +91,50 @@ export default class ArchiveIndex {
     // Parse the Master-Index.xml stream
     parse_xml(stream) {
         return new Promise((resolve) => {
-            const data = []
+            const files = []
+            const symlinks = []
             const supported_formats = this.options.supported_formats
             const xml = flow(stream)
 
             xml.on('tag:file', file => {
-                if (supported_formats.test(file.path)) {
-                    // Trim if-archive/ from the beginning
-                    const path = file.path.replace(/^if-archive\//, '')
+                // Trim if-archive/ from the beginning
+                const path = file.path.replace(/^if-archive\//, '')
+                // Handle symlinks
+                if (file.symlink) {
+                    // Only add zip file symlinks to the index
+                    if (file.symlink.$attrs.type === 'file') {
+                        if (!supported_formats.test(path)) {
+                            return
+                        }
+                        // Resolve the relative path
+                        symlinks.push([path, (new URL(file.symlink.path, 'https://ifarchive.org/if-archive/' + path)).toString().substring(33)])
+                    }
+                    else {
+                        symlinks.push([path, file.symlink.name.replace(/^if-archive\//, '')])
+                    }
+                }
+                // Regular files
+                else if (supported_formats.test(path)) {
                     const hash = parseInt(crypto.createHash('sha512').update(path).digest('hex').substring(0, 12), 16)
                     const date = +(new Date(`${file.date} UTC`))
-                    data.push([hash, path, date])
+                    files.push([hash, path, date])
                 }
             })
 
-            xml.on('end', () => resolve(data))
+            xml.on('end', () => resolve({
+                files,
+                symlinks,
+            }))
         })
     }
 
     // Update the maps
     async update_maps(data) {
+        // Files
         const hash_to_date = new Map()
         this.hash_to_path = new Map()
         this.path_to_hash = new Map()
-        for (const file of data) {
+        for (const file of data.files) {
             const hash = file[0]
             const path = file[1]
             const date = file[2]
@@ -115,6 +142,20 @@ export default class ArchiveIndex {
             this.hash_to_path.set(hash, path)
             this.path_to_hash.set(path, hash)
         }
+
+        // Symlinks
+        const supported_formats = this.options.supported_formats
+        this.symlinked_dirs = new Map()
+        this.symlinked_files = new Map()
+        for (const symlink of data.symlinks) {
+            if (supported_formats.test(symlink[0])) {
+                this.symlinked_files.set(symlink[0], symlink[1])
+            }
+            else {
+                this.symlinked_dirs.set(symlink[0], symlink[1])
+            }
+        }
+
         // Purge the cache of old files
         await this.cache.purge(hash_to_date)
     }

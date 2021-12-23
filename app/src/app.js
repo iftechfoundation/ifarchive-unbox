@@ -127,7 +127,21 @@ export default class UnboxApp {
                 ctx.throw(400, `Sorry, we don't support files from outside the IF Archive`)
             }
 
-            const file_path = query.url.replace(VALID_ORIGINS, '').replace(/^if-archive\//, '')
+            let file_path = query.url.replace(VALID_ORIGINS, '').replace(/^if-archive\//, '')
+
+            // Handle symlinks
+            if (this.index.symlinked_files.has(file_path)) {
+                file_path = this.index.symlinked_files.get(file_path)
+            }
+            else {
+                for (const [path, target] of this.index.symlinked_dirs) {
+                    if (file_path.startsWith(path)) {
+                        file_path = file_path.replace(path, target)
+                        break
+                    }
+                }
+            }
+
             const hash = this.index.path_to_hash.get(file_path)
             if (!hash) {
                 ctx.throw(400, `Unknown file: ${query.url}`)
