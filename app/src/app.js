@@ -19,6 +19,12 @@ import * as templates from './templates.js'
 const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
 const VALID_ORIGINS = /^https?:\/\/(mirror\.|www\.)?ifarchive\.org\//
 
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#escaping
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // $& means the whole matched string
+}
+
+
 export default class UnboxApp {
     constructor(options, cache, index) {
         this.cache = cache
@@ -151,7 +157,7 @@ export default class UnboxApp {
 
             // Search for a file
             if (query.find) {
-                const candidates = details.contents.filter(file => file.endsWith(query.find))
+                const candidates = details.contents.filter(file => new RegExp("(^|/)" + escapeRegExp(query.find) + "$", 'i').test(file))
                 if (candidates.length > 1) {
                     ctx.body = templates.wrapper({
                         canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}&find=${query.find}`,
