@@ -37,9 +37,16 @@ export default class UnboxApp {
             }
             catch (err) {
                 ctx.status = err.statusCode || err.status || 500
-                ctx.body = templates.wrapper({
-                    content: templates.error(err),
-                })
+                if ('json' in ctx.query) {
+                    ctx.body = {
+                        error: err,
+                    }
+                }
+                else {
+                    ctx.body = templates.wrapper({
+                        content: templates.error(err),
+                    })
+                }
                 if (ctx.status !== 400) {
                     ctx.app.emit('error', err, ctx)
                 }
