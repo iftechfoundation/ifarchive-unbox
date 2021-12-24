@@ -26,7 +26,8 @@ Here are all the options you can set in data/options.json
     "nginx": {
         "cache" :{
             "keys_size": 50,
-            "max_size": 1000
+            "max_size": 1000,
+            "support_bypass": false
         },
         "reload_time": 360
     },
@@ -56,6 +57,7 @@ Note that if you want to set one of the object options, you may need to include 
   - cache: nginx cache options
     - keys_size: (int MB) amount of RAM to use for cache keys
     - max_size: (int MB) amount of disk to use for the cache
+    - support_bypass: (bool) whether to support bypassing the cache through the "Pragma: no-cache" HTTP header
   - reload_time: (int minutes) period to reload nginx (to check for certificate changes)
 - serve_proxy_pac: (bool) whether to serve a proxy.pac file
 - subdomains: (bool) whether to use wildcard subdomains for unsafe files

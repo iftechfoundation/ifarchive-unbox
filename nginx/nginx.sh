@@ -11,6 +11,7 @@ if [ -f "$OPTIONS_FILE" ]; then
     MAX_SIZE=$(jq -r '.nginx?.cache?.max_size? // 1000' $OPTIONS_FILE)
     RELOAD_TIME=$(jq -r '.nginx?.reload_time? // 360' $OPTIONS_FILE)
     SUBDOMAINS=$(jq -r '.subdomains? // false' $OPTIONS_FILE)
+    SUPPORT_BYPASS=$(jq -r '.nginx?.cache?.support_bypass? // false' $OPTIONS_FILE)
 fi
 
 # Common gzip settings
@@ -69,6 +70,10 @@ EOF
 
 if [ -n "$DOMAIN" ] && [ "$SUBDOMAINS" = "true" ]; then
 
+if [ "$SUPPORT_BYPASS" = "true" ]; then
+    BYPASS="proxy_cache_bypass \$http_pragma;"
+fi
+
 # Subdomain server
 cat >> $CONF_FILE <<EOF
 
@@ -80,6 +85,7 @@ server {
     $SSL
     $GZIP
     proxy_cache cache;
+    $BYPASS
 
     location / {
         proxy_pass http://app:8080;
