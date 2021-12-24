@@ -11,7 +11,7 @@ https://github.com/iftechfoundation/ifarchive-unbox
 
 import {escape} from 'lodash-es'
 
-import {UNSAFE_FILES} from './defines.js'
+import {UNSAFE_FILES} from './common.js'
 
 function percent(path) {
     return escape(path).replaceAll('?', '%3F')

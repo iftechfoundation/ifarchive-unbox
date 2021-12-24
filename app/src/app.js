@@ -9,11 +9,10 @@ https://github.com/iftechfoundation/ifarchive-unbox
 
 */
 
-import child_process from 'child_process'
 import path from 'path'
 import Koa from 'koa'
 
-import {COMMON_FILE_TYPES, TYPES_TO_DETECT_BETTER, UNSAFE_FILES} from './defines.js'
+import {COMMON_FILE_TYPES, TYPES_TO_DETECT_BETTER, UNSAFE_FILES} from './common.js'
 import * as templates from './templates.js'
 
 const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
@@ -123,11 +122,12 @@ export default class UnboxApp {
             }
 
             // Normalise URLs
-            if (!VALID_ORIGINS.test(query.url)) {
+            const url = decodeURI(query.url)
+            if (!VALID_ORIGINS.test(url)) {
                 ctx.throw(400, `Sorry, we don't support files from outside the IF Archive`)
             }
 
-            let file_path = query.url.replace(VALID_ORIGINS, '').replace(/^if-archive\//, '')
+            let file_path = url.replace(VALID_ORIGINS, '').substring(11)
 
             // Handle symlinks
             if (this.index.symlinked_files.has(file_path)) {
@@ -246,7 +246,6 @@ export default class UnboxApp {
         const mime_type = ctx.type
         if (!mime_type || TYPES_TO_DETECT_BETTER.includes(mime_type)) {
             const new_type = await this.cache.get_file_type(hash, file_path, details.type)
-            console.log(new_type)
             ctx.type = new_type
         }
 

@@ -19,6 +19,8 @@ import fs from 'fs/promises'
 import path from 'path'
 import util from 'util'
 
+import {SUPPORTED_FORMATS, escape_shell_single_quoted} from './common.js'
+
 const exec = util.promisify(child_process.exec)
 const execFile = util.promisify(child_process.execFile)
 
@@ -69,7 +71,7 @@ export default class FileCache {
     async download(hash) {
         // Download the file with curl
         const url = `https://${this.options.archive_domain}/if-archive/${this.index.hash_to_path.get(hash)}`
-        const type = this.options.supported_formats.exec(url)[1].toLowerCase()
+        const type = SUPPORTED_FORMATS.exec(url)[1].toLowerCase()
         const cache_path = path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
         const details = await execFile('curl', [encodeURI(url), '-o', cache_path, '-s', '-S', '-D', '-'])
         if (details.stderr) {
@@ -179,18 +181,20 @@ export default class FileCache {
     async get_file_type(hash, file_path, type) {
         const zip_path = this.file_path(hash, type)
         if (type === 'tar.gz') {
-            const results = await exec(`tar -xOzf ${zip_path} "${file_path}" | file -i -`)
+            const results = await exec(`tar -xOzf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
             if (results.stderr.length) {
                 throw new Error(`tar|file error: ${results.stderr.toString()}`)
             }
-            return results.stdout.trim().replace('/dev/stdin: ', '')
+            // Trim '/dev/stdin:'
+            return results.stdout.trim().substring(12)
         }
         else if (type === 'zip') {
-            const results = await exec(`unzip -p ${zip_path} "${file_path}" | file -i -`)
+            const results = await exec(`unzip -p ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
             if (results.stderr.length) {
                 throw new Error(`unzip|file error: ${results.stderr.toString()}`)
             }
-            return results.stdout.trim().replace('/dev/stdin: ', '')
+            // Trim '/dev/stdin:'
+            return results.stdout.trim().substring(12)
         }
         else {
             throw new Error('Other archive format not yet supported')

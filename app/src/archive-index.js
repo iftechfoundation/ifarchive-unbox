@@ -13,6 +13,8 @@ import crypto from 'crypto'
 import fs from 'fs/promises'
 import path from 'path'
 
+import {SUPPORTED_FORMATS} from './common.js'
+
 import fetch from 'node-fetch'
 import flow from 'xml-flow'
 
@@ -93,28 +95,29 @@ export default class ArchiveIndex {
         return new Promise((resolve) => {
             const files = []
             const symlinks = []
-            const supported_formats = this.options.supported_formats
             const xml = flow(stream)
 
             xml.on('tag:file', file => {
                 // Trim if-archive/ from the beginning
-                const path = file.path.replace(/^if-archive\//, '')
+                const path = file.path.substring(11)
                 // Handle symlinks
                 if (file.symlink) {
                     // Only add zip file symlinks to the index
                     if (file.symlink.$attrs.type === 'file') {
-                        if (!supported_formats.test(path)) {
+                        if (!SUPPORTED_FORMATS.test(path)) {
                             return
                         }
                         // Resolve the relative path
                         symlinks.push([path, (new URL(file.symlink.path, 'https://ifarchive.org/if-archive/' + path)).toString().substring(33)])
                     }
                     else {
-                        symlinks.push([path, file.symlink.name.replace(/^if-archive\//, '')])
+                        // Trim if-archive/
+                        symlinks.push([path, file.symlink.name.substring(11)])
                     }
                 }
                 // Regular files
-                else if (supported_formats.test(path)) {
+                else if (SUPPORTED_FORMATS.test(path)) {
+                    // 48 bits of the sha512 hash of the path
                     const hash = parseInt(crypto.createHash('sha512').update(path).digest('hex').substring(0, 12), 16)
                     const date = +(new Date(`${file.date} UTC`))
                     files.push([hash, path, date])
@@ -144,11 +147,10 @@ export default class ArchiveIndex {
         }
 
         // Symlinks
-        const supported_formats = this.options.supported_formats
         this.symlinked_dirs = new Map()
         this.symlinked_files = new Map()
         for (const symlink of data.symlinks) {
-            if (supported_formats.test(symlink[0])) {
+            if (SUPPORTED_FORMATS.test(symlink[0])) {
                 this.symlinked_files.set(symlink[0], symlink[1])
             }
             else {

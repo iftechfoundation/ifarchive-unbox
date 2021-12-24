@@ -1,7 +1,7 @@
 /*
 
-IF Archive Definitions & Constants
-==================================
+IF Archive common constants and functions
+=========================================
 
 Copyright (c) 2021 Dannii Willis
 MIT licenced
@@ -34,6 +34,8 @@ export const COMMON_FILE_TYPES = {
     z8: 'application/x-zmachine',
 }
 
+export const SUPPORTED_FORMATS = /\.(tar\.gz|zip)$/i
+
 export const TYPES_TO_DETECT_BETTER = [
     'application/octet-stream',
     'text/html',
@@ -41,3 +43,8 @@ export const TYPES_TO_DETECT_BETTER = [
 ]
 
 export const UNSAFE_FILES = /\.(html?|svg)$/i
+
+// Escape for use inside of a single quoted shell argument
+export function escape_shell_single_quoted(str) {
+    return str.replace(/'/g, `'\\''`)
+}

@@ -31,7 +31,6 @@ const default_options = {
     },
     serve_proxy_pac: false, // Whether to serve the proxy.pac file
     subdomains: false, // Whether to use subdomains
-    supported_formats: /\.(tar\.gz|zip)$/i,
 }
 
 async function main() {
