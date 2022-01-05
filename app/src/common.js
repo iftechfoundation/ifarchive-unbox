@@ -44,6 +44,12 @@ export const TYPES_TO_DETECT_BETTER = [
 
 export const UNSAFE_FILES = /\.(html?|svg)$/i
 
+// Escape for use inside a regular expression
+// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#escaping
+export function escape_regexp(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // $& means the whole matched string
+}
+
 // Escape for use inside of a single quoted shell argument
 export function escape_shell_single_quoted(str) {
     return str.replace(/'/g, `'\\''`)

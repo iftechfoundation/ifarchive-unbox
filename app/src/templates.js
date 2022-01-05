@@ -60,13 +60,14 @@ export function form() {
         </div>`
 }
 
-export function list(label, path, hash, contents, domain, subdomains) {
-    const listcontents = contents.map(file => `<li><a href="${subdomains && UNSAFE_FILES.test(file) ? `//${hash}.${domain}` : ''}/${hash}/${percent(file)}">${escape(file)}</a></li>`).join('\n')
+export function list(opts) {
+    const listcontents = opts.files.map(file => `<li><a href="${opts.subdomains && UNSAFE_FILES.test(file) ? `//${opts.hash}.${opts.domain}` : ''}/${opts.hash}/${percent(file)}">${escape(file)}</a></li>`).join('\n')
     return `
         <div style="text-align: center">
-            <h2>${escape(label)} <a href="https://ifarchive.org/if-archive/${path}">${escape(path)}</a></h2>
-            <div style="display: inline-block; margin: 0 auto; text-align: left">
+            <h2>${escape(opts.label)} <a href="https://ifarchive.org/if-archive/${opts.path}">${escape(opts.path)}</a></h2>
+            ${listcontents.length ? `<div style="display: inline-block; margin: 0 auto; text-align: left">
                 <ul>${listcontents}</ul>
-            </div>
+            </div>` : '<p>No matching files</p>'}
+            ${opts.alllink ? `<p><a href="/?url=https://ifarchive.org/if-archive/${opts.path}">See all files</a></p>` : ''}
         </div>`
 }

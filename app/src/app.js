@@ -12,7 +12,12 @@ https://github.com/iftechfoundation/ifarchive-unbox
 import path from 'path'
 import Koa from 'koa'
 
-import {COMMON_FILE_TYPES, TYPES_TO_DETECT_BETTER, UNSAFE_FILES} from './common.js'
+import {
+    COMMON_FILE_TYPES,
+    TYPES_TO_DETECT_BETTER,
+    UNSAFE_FILES,
+    escape_regexp,
+} from './common.js'
 import * as templates from './templates.js'
 
 const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
@@ -156,23 +161,56 @@ export default class UnboxApp {
 
             const details = await this.cache.get(hash)
 
-            // Search for a file
-            if (query.find) {
-                const candidates = details.contents.filter(file => file.endsWith(query.find))
-                if (candidates.length > 1) {
+            // Search for files
+            if (query.search) {
+                const search_regexp = new RegExp(escape_regexp(query.search), 'i')
+                const results = details.contents.filter(file => search_regexp.test(file))
+                if ('json' in query) {
+                    ctx.body = {
+                        files: results
+                    }
+                }
+                else {
                     ctx.body = templates.wrapper({
-                        canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}&find=${query.find}`,
-                        content: templates.list(`Files matching ${query.find} in`, file_path, hash.toString(36), candidates, this.options.domain, this.options.subdomains),
+                        canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}&find=${query.search}`,
+                        content: templates.list({
+                            alllink: true,
+                            domain: this.options.domain,
+                            files: results,
+                            hash: hash.toString(36),
+                            label: `Files matching ${query.search} in`,
+                            path: file_path,
+                            subdomains: this.options.subdomains,
+                        }),
                         title: path.basename(file_path),
                     })
+                }
+                return
+            }
+
+            // Open (redirect) to a specific file
+            if (query.open) {
+                const open_regexp = new RegExp(`(^|/)${escape_regexp(query.open)}$`, 'i')
+                const results = details.contents.filter(file => open_regexp.test(file))
+                if (results.length > 1) {
+                    ctx.throw(400, 'Filename is not unique')
+                }
+                if (results.length === 1) {
+                    ctx.status = 301
+                    ctx.redirect(`/${hash.toString(36)}/${results[0]}`)
                     return
                 }
-                if (candidates.length === 0) {
-                    ctx.throw(400, 'No matching file')
+                // No matching file, but if enabled we can look for another file of the same type
+                if (this.options.open_file_of_same_type) {
+                    const same_type_regexp = new RegExp(`\\.${path.extname(query.open).substring(1)}$`, 'i')
+                    const results = details.contents.filter(file => same_type_regexp.test(file))
+                    if (results.length === 1) {
+                        ctx.status = 301
+                        ctx.redirect(`/${hash.toString(36)}/${results[0]}`)
+                        return
+                    }
                 }
-                ctx.status = 301
-                ctx.redirect(`/${hash.toString(36)}/${candidates[0]}`)
-                return
+                ctx.throw(400, 'No matching file')
             }
 
             // Send and check the Last-Modified/If-Modified-Since headers
@@ -194,7 +232,14 @@ export default class UnboxApp {
             // Show the list of files
             ctx.body = templates.wrapper({
                 canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}`,
-                content: templates.list('Contents of', file_path, hash.toString(36), details.contents, this.options.domain, this.options.subdomains),
+                content: templates.list({
+                    domain: this.options.domain,
+                    files: details.contents,
+                    hash: hash.toString(36),
+                    label: 'Contents of',
+                    path: file_path,
+                    subdomains: this.options.subdomains,
+                }),
                 title: path.basename(file_path),
             })
             return

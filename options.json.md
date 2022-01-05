@@ -31,6 +31,7 @@ Here are all the options you can set in data/options.json
         },
         "reload_time": 360
     },
+    "open_file_of_same_type": true,
     "serve_proxy_pac": false,
     "subdomains": true
 }
@@ -59,5 +60,6 @@ Note that if you want to set one of the object options, you may need to include 
     - max_size: (int MB) amount of disk to use for the cache
     - support_bypass: (bool) whether to support bypassing the cache through the "Pragma: no-cache" HTTP header
   - reload_time: (int minutes) period to reload nginx (to check for certificate changes)
+- open_file_of_same_type: (bool) when opening a specific file, with the `open` query parameter, if no direct match is found, to redirect to another file as long as there is only one that matches the file extension
 - serve_proxy_pac: (bool) whether to serve a proxy.pac file
 - subdomains: (bool) whether to use wildcard subdomains for unsafe files
