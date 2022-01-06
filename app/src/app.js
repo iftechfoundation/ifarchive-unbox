@@ -161,33 +161,6 @@ export default class UnboxApp {
 
             const details = await this.cache.get(hash)
 
-            // Search for files
-            if (query.search) {
-                const search_regexp = new RegExp(escape_regexp(query.search), 'i')
-                const results = details.contents.filter(file => search_regexp.test(file))
-                if ('json' in query) {
-                    ctx.body = {
-                        files: results
-                    }
-                }
-                else {
-                    ctx.body = templates.wrapper({
-                        canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}&find=${query.search}`,
-                        content: templates.list({
-                            alllink: true,
-                            domain: this.options.domain,
-                            files: results,
-                            hash: hash.toString(36),
-                            label: `Files matching ${query.search} in`,
-                            path: file_path,
-                            subdomains: this.options.subdomains,
-                        }),
-                        title: path.basename(file_path),
-                    })
-                }
-                return
-            }
-
             // Open (redirect) to a specific file
             if (query.open) {
                 const open_regexp = new RegExp(`(^|/)${escape_regexp(query.open)}$`, 'i')
@@ -218,6 +191,33 @@ export default class UnboxApp {
             ctx.lastModified = new Date(details.date)
             if (ctx.fresh) {
                 ctx.status = 304
+                return
+            }
+
+            // Search for files
+            if (query.search) {
+                const search_regexp = new RegExp(escape_regexp(query.search), 'i')
+                const results = details.contents.filter(file => search_regexp.test(file))
+                if ('json' in query) {
+                    ctx.body = {
+                        files: results
+                    }
+                }
+                else {
+                    ctx.body = templates.wrapper({
+                        canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}&find=${query.search}`,
+                        content: templates.list({
+                            alllink: true,
+                            domain: this.options.domain,
+                            files: results,
+                            hash: hash.toString(36),
+                            label: `Files matching ${query.search} in`,
+                            path: file_path,
+                            subdomains: this.options.subdomains,
+                        }),
+                        title: path.basename(file_path),
+                    })
+                }
                 return
             }
 

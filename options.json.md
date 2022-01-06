@@ -37,8 +37,6 @@ Here are all the options you can set in data/options.json
 }
 ```
 
-Note that if you want to set one of the object options, you may need to include all sub-options, not just the one you want to change.
-
 - archive_domain: (str) domain of the IF Archive to use for downloading files
 - cache: options for the app's cache
   - max_buffer: (int bytes) buffer size to use when extracting to RAM

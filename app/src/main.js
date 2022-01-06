@@ -10,6 +10,7 @@ https://github.com/iftechfoundation/ifarchive-unbox
 */
 
 import fs from 'fs/promises'
+import {merge} from 'lodash-es'
 import path from 'path'
 
 import UnboxApp from './app.js'
@@ -48,7 +49,7 @@ async function main() {
         options_json = await fs.readFile(options_path, {encoding: 'utf8'})
     }
     catch (_) {}
-    const options = Object.assign({}, default_options, JSON.parse(options_json))
+    const options = merge({}, default_options, JSON.parse(options_json))
 
     // If no domain option, then disable subdomains
     if (!options.domain) {
