@@ -43,7 +43,7 @@ export default class ArchiveIndex {
         await this.check_for_update()
 
         // Check again later
-        setInterval(() => this.check_for_update(), this.options.index.recheck_period)
+        setInterval(() => this.check_for_update(), this.options.index.recheck_period * 60 * 1000)
     }
 
     async check_for_update() {

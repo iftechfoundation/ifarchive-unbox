@@ -28,7 +28,7 @@ const default_options = {
     //domain: 'unbox.ifarchive.org', // App domain
     index: {
         index_url: 'https://ifarchive.org/indexes/Master-Index.xml',
-        recheck_period: 21600000, // Every 6 hours
+        recheck_period: 360, // Every 6 hours
     },
     serve_proxy_pac: false, // Whether to serve the proxy.pac file
     subdomains: false, // Whether to use subdomains
