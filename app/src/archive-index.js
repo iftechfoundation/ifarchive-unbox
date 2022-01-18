@@ -7,6 +7,10 @@ Copyright (c) 2021 Dannii Willis
 MIT licenced
 https://github.com/iftechfoundation/ifarchive-unbox
 
+This periodically checks the Master-Index.xml file on the main Archive
+server. If the file has changed (as indicated by its ETag header) it
+downloads it and parses it.
+
 */
 
 import crypto from 'crypto'

@@ -9,6 +9,7 @@ https://github.com/iftechfoundation/ifarchive-unbox
 
 */
 
+// Maps familiar file suffixes to MIME types.
 export const COMMON_FILE_TYPES = {
     blb: 'application/x-blorb',
     blorb: 'application/x-blorb',
@@ -34,14 +35,18 @@ export const COMMON_FILE_TYPES = {
     z8: 'application/x-zmachine',
 }
 
+// Regex: what package formats do we handle?
 export const SUPPORTED_FORMATS = /\.(tar\.gz|zip)$/i
 
+// List of types where we need to do additional work to get the character set headers right.
 export const TYPES_TO_DETECT_BETTER = [
     'application/octet-stream',
     'text/html',
     'text/plain',
 ]
 
+// Regex: what file types must be handled by a subdomain?
+// (HTML and SVG can have scripting, so they must be isolated. Media files can be on the main domain so that the CDN can cache them.)
 export const UNSAFE_FILES = /\.(html?|svg)$/i
 
 // Escape for use inside a regular expression
