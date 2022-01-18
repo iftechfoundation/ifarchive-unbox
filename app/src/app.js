@@ -200,7 +200,8 @@ export default class UnboxApp {
                 const results = details.contents.filter(file => search_regexp.test(file))
                 if ('json' in query) {
                     ctx.body = {
-                        files: results
+                        files: results,
+                        hash: hash.toString(36),
                     }
                 }
                 else {
@@ -224,7 +225,8 @@ export default class UnboxApp {
             // JSON
             if ('json' in query) {
                 ctx.body = {
-                    files: details.contents
+                    files: details.contents,
+                    hash: hash.toString(36),
                 }
                 return
             }
