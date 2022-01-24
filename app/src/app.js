@@ -139,7 +139,15 @@ export default class UnboxApp {
                 ctx.throw(400, `Sorry, we don't support files from outside the IF Archive`)
             }
 
-            let file_path = url.replace(VALID_ORIGINS, '').substring(11)
+            // Remove the "http://domain/" part
+            let uri = url.replace(VALID_ORIGINS, '')
+            
+            if (!uri.startsWith('if-archive/')) {
+                ctx.throw(400, `Sorry, we don't support files outside the if-archive tree`)
+            }
+            
+            // Remove "if-archive/" part
+            let file_path = uri.substring(11)
 
             // Handle symlinks
             if (this.index.symlinked_files.has(file_path)) {
