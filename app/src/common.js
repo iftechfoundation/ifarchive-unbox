@@ -31,6 +31,8 @@ export const COMMON_FILE_TYPES = {
     z3: 'application/x-zmachine',
     z4: 'application/x-zmachine',
     z5: 'application/x-zmachine',
+    z6: 'application/x-zmachine',
+    z7: 'application/x-zmachine',
     z8: 'application/x-zmachine',
 }
 
