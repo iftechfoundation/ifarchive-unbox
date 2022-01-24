@@ -125,7 +125,7 @@ export default class FileCache {
     }
 
     // Get a file out of the cache, or download it
-    // Note that this may return a promise! The caller must await it for a valid entry.
+    // This may immediately return the file entry, or it may return a promise that waits for it to be downloaded, but `await`ing the result will handle both seamlessly.
     async get(hash) {
         if (this.cache.has(hash)) {
             this.hit(hash)
