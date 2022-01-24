@@ -167,6 +167,10 @@ export default class UnboxApp {
                 ctx.throw(400, `Unknown file: ${query.url}`)
             }
 
+            if (this.index.blocked_files.has(hash)) {
+                ctx.throw(400, `Cannot handle file: ${query.url}`)
+            }
+
             const details = await this.cache.get(hash)
 
             // Open (redirect) to a specific file
