@@ -1,9 +1,12 @@
 IF Archive Unboxing Service
 ===========================
 
-The Unbox service allows users to view the contents of `zip` and `tar.gz` packages on ifarchive.org. For browser games (such as zipped Twine games), this is all that's needed to make them directly playable.
+The Unbox service allows users to view the contents of `zip` and `tar.gz` packages on the [IF Archive][ifarch]. For browser games (such as zipped Twine games), this is all that's needed to make them directly playable.
 
-Unbox also allows web interpreters (such as iplayif.com) to play `zip`ped-up game files.
+Unbox also allows web interpreters (such as [iplayif.com][iplayif]) to play `zip`ped-up game files.
+
+[ifarch]: https://ifarchive.org/
+[iplayif]: https://iplayif.com/
 
 ## What's going on?
 
@@ -34,17 +37,17 @@ Why this dual treatment? We want to use a CDN (Cloudflare) to cache large files 
 
 ## Details
 
-The hash value is computed by taking the SHA512 hash of the URI, taking the first 48 bits of that, and converting that integer to an alphanumeric string using `toString(36)`. For example: `"games/twine/Absent_Heroes.zip" -> 186486238769662 -> "1u3qlfmqda"`. There is no reason for you to need this information.
-
 In production, Unbox consists of three layers:
 
-- `ifarchive-unbox` is the app itself. It maintains a cache of `zip/tar.gz` files downloaded from ifarchive.org. It also keeps a local copy of the Archive's `Master-Index.xml` file.
+- `ifarchive-unbox` is the app itself. It maintains a cache of `zip/tar.gz` files downloaded from [ifarchive.org][ifarch]. It also keeps a local copy of the Archive's `Master-Index.xml` file.
 - `nginx` is a caching web server that runs in front of `ifarchive-unbox`. This caches HTML/SVG files.
 - A CDN such as CloudFlare is configured in front of `nginx`. This handles caching of media files.
 
 This repository sets up the first two layers. The CDN must be set up separately.
 
 (You can run Unbox without the CDN, but then media files will not be cached. Unbox will do an `unzip` for every media file request. Only run this way for testing.)
+
+The hash value for a URI is computed by taking the SHA512 hash of the URI, taking the first 48 bits of that, and converting that integer to an alphanumeric string using `toString(36)`. For example: `"games/twine/Absent_Heroes.zip" -> 186486238769662 -> "1u3qlfmqda"`. There is no reason for you to need this information.
 
 ## Running Unbox
 
