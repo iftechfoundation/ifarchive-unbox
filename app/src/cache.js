@@ -95,7 +95,7 @@ export default class FileCache {
         // Get the files inside
         const contents = await this.list_contents(cache_path, type)
 
-        // Update the cache
+        // Update the cache, replacing the promise entry with a resolved entry object
         const entry = new CacheEntry(contents, +date, size, type)
         this.cache.set(hash, entry)
 
@@ -107,6 +107,7 @@ export default class FileCache {
     }
 
     // Evict old entries to make space for new ones
+    // This checks both the number of entries and their total size. (Size is the total size of zip files, not the total unpacked size.) We discard old entries as long as we're over either limit.
     async evict() {
         while (this.lru.length > this.max_entries || this.size > this.max_size) {
             const hash = this.lru.pop()
@@ -117,17 +118,22 @@ export default class FileCache {
         }
     }
 
+    // Return the path where the given Archive file is downloaded to.
+    // (HASH.zip or HASH.tar.gz in the cache dir.)
     file_path(hash, type) {
         return path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
     }
 
     // Get a file out of the cache, or download it
+    // This may immediately return the file entry, or it may return a promise that waits for it to be downloaded, but `await`ing the result will handle both seamlessly.
     async get(hash) {
         if (this.cache.has(hash)) {
             this.hit(hash)
             return this.cache.get(hash)
         }
 
+        // We add the promise to the cache even if it's pending. That way, future callers will get the same promise and will wait in parallel on it.
+        // (It would be bad if two callers got different promises to the same hash, which then started to download to the same location.)
         this.lru.unshift(hash)
         const entry_promise = this.download(hash)
         this.cache.set(hash, entry_promise)

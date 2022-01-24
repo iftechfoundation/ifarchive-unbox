@@ -7,6 +7,8 @@ Copyright (c) 2021 Dannii Willis
 MIT licenced
 https://github.com/iftechfoundation/ifarchive-unbox
 
+As you can see, this file contains HTML templates for the Unbox front end.
+
 */
 
 import {escape} from 'lodash-es'
