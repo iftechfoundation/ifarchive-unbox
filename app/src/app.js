@@ -21,7 +21,7 @@ import {
 import * as templates from './templates.js'
 
 const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
-const VALID_ORIGINS = /^https?:\/\/(mirror\.|www\.)?ifarchive\.org\//
+const VALID_ORIGINS = /^(https?:\/\/(mirror\.|www\.)?ifarchive\.org)?\//
 
 export default class UnboxApp {
     constructor(options, cache, index) {
