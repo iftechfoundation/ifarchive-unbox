@@ -22,6 +22,8 @@ import {SUPPORTED_FORMATS} from './common.js'
 import fetch from 'node-fetch'
 import flow from 'xml-flow'
 
+const JSON_VERSION = 3
+
 export default class ArchiveIndex {
     constructor(data_dir, options, cache) {
         this.cache = cache
@@ -33,6 +35,7 @@ export default class ArchiveIndex {
         this.path_to_hash = null
         this.symlinked_dirs = null
         this.symlinked_files = null
+        this.blocked_files = null
     }
 
     async init() {
@@ -67,7 +70,7 @@ export default class ArchiveIndex {
             }
             // Parse the stored data if we didn't update it just now
             const index_data = JSON.parse(await fs.readFile(this.data_path, {encoding: 'utf8'}))
-            if (index_data.symlinks) {
+            if (index_data.version === JSON_VERSION) {
                 console.log('ArchiveIndex: Loading stored data')
                 await this.update_maps(index_data)
                 return
@@ -99,6 +102,7 @@ export default class ArchiveIndex {
         return new Promise((resolve) => {
             const files = []
             const symlinks = []
+            const meta_blocks = []
             const xml = flow(stream)
 
             xml.on('tag:file', file => {
@@ -125,12 +129,26 @@ export default class ArchiveIndex {
                     const hash = parseInt(crypto.createHash('sha512').update(path).digest('hex').substring(0, 12), 16)
                     const date = +(new Date(`${file.date} UTC`))
                     files.push([hash, path, date])
+
+                    if (file.metadata) {
+                        let items = file.metadata
+                        if (!Array.isArray(items)) {
+                            items = [ items ]
+                        }
+                        for (const item of items) {
+                            if (item.key == 'unbox-block' && item.value == 'true') {
+                                meta_blocks.push(hash)
+                            }
+                        }
+                    }
                 }
             })
 
             xml.on('end', () => resolve({
                 files,
+                meta_blocks,
                 symlinks,
+                version: JSON_VERSION,
             }))
         })
     }
@@ -160,6 +178,12 @@ export default class ArchiveIndex {
             else {
                 this.symlinked_dirs.set(symlink[0], symlink[1])
             }
+        }
+
+        // Metadata
+        this.blocked_files = new Set()
+        for (const hash of data.meta_blocks) {
+            this.blocked_files.add(hash)
         }
 
         // Purge the cache of old files

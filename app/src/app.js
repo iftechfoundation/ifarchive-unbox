@@ -21,7 +21,7 @@ import {
 import * as templates from './templates.js'
 
 const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
-const VALID_ORIGINS = /^https?:\/\/(mirror\.|www\.)?ifarchive\.org\//
+const VALID_ORIGINS = /^(https?:\/\/(mirror\.|www\.)?ifarchive\.org)?\//
 
 export default class UnboxApp {
     constructor(options, cache, index) {
@@ -139,7 +139,15 @@ export default class UnboxApp {
                 ctx.throw(400, `Sorry, we don't support files from outside the IF Archive`)
             }
 
-            let file_path = url.replace(VALID_ORIGINS, '').substring(11)
+            // Remove the "http://domain/" part
+            let uri = url.replace(VALID_ORIGINS, '')
+            
+            if (!uri.startsWith('if-archive/')) {
+                ctx.throw(400, `Sorry, we don't support files outside the if-archive tree`)
+            }
+            
+            // Remove "if-archive/" part
+            let file_path = uri.substring(11)
 
             // Handle symlinks
             if (this.index.symlinked_files.has(file_path)) {
@@ -157,6 +165,10 @@ export default class UnboxApp {
             const hash = this.index.path_to_hash.get(file_path)
             if (!hash) {
                 ctx.throw(400, `Unknown file: ${query.url}`)
+            }
+
+            if (this.index.blocked_files.has(hash)) {
+                ctx.throw(400, `Cannot handle file: ${query.url}`)
             }
 
             const details = await this.cache.get(hash)
