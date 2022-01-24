@@ -18,6 +18,8 @@ import {SUPPORTED_FORMATS} from './common.js'
 import fetch from 'node-fetch'
 import flow from 'xml-flow'
 
+const JSON_VERSION = 3
+
 export default class ArchiveIndex {
     constructor(data_dir, options, cache) {
         this.cache = cache
@@ -64,7 +66,7 @@ export default class ArchiveIndex {
             }
             // Parse the stored data if we didn't update it just now
             const index_data = JSON.parse(await fs.readFile(this.data_path, {encoding: 'utf8'}))
-            if (index_data.symlinks) {
+            if (index_data.version === JSON_VERSION) {
                 console.log('ArchiveIndex: Loading stored data')
                 await this.update_maps(index_data)
                 return
@@ -140,8 +142,9 @@ export default class ArchiveIndex {
 
             xml.on('end', () => resolve({
                 files,
-                symlinks,
                 meta_blocks,
+                symlinks,
+                version: JSON_VERSION,
             }))
         })
     }
