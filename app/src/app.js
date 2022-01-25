@@ -52,7 +52,7 @@ export default class UnboxApp {
                         content: templates.error(err),
                     })
                 }
-                if (ctx.status !== 400) {
+                if (ctx.status < 400 || ctx.status > 404) {
                     ctx.app.emit('error', err, ctx)
                 }
             }
@@ -143,7 +143,7 @@ export default class UnboxApp {
             let uri = url.replace(VALID_ORIGINS, '')
             
             if (!uri.startsWith('if-archive/')) {
-                ctx.throw(400, `Sorry, we don't support files outside the if-archive tree`)
+                ctx.throw(403, `Sorry, we don't support files outside the if-archive tree`)
             }
             
             // Remove "if-archive/" part
@@ -164,11 +164,11 @@ export default class UnboxApp {
 
             const hash = this.index.path_to_hash.get(file_path)
             if (!hash) {
-                ctx.throw(400, `Unknown file: ${query.url}`)
+                ctx.throw(404, `Unknown file: ${query.url}`)
             }
 
             if (this.index.blocked_files.has(hash)) {
-                ctx.throw(400, `Cannot handle file: ${query.url}`)
+                ctx.throw(403, `Cannot handle file: ${query.url}`)
             }
 
             const details = await this.cache.get(hash)
@@ -195,7 +195,7 @@ export default class UnboxApp {
                         return
                     }
                 }
-                ctx.throw(400, 'No matching file')
+                ctx.throw(404, 'No matching file')
             }
 
             // Send and check the Last-Modified/If-Modified-Since headers
@@ -268,7 +268,7 @@ export default class UnboxApp {
         const hash = parseInt(hash_string, 36)
         const zip_path = this.index.hash_to_path.get(hash)
         if (!zip_path) {
-            ctx.throw(400, `Unknown file hash: ${hash_string}`)
+            ctx.throw(404, `Unknown file hash: ${hash_string}`)
         }
 
         // Redirect folder views back to the index
@@ -281,7 +281,7 @@ export default class UnboxApp {
 
         const details = await this.cache.get(hash)
         if (details.contents.indexOf(file_path) < 0) {
-            ctx.throw(400, `${zip_path} does not contain file ${file_path}`)
+            ctx.throw(404, `${zip_path} does not contain file ${file_path}`)
         }
 
         // Check for non-matching subdomain
