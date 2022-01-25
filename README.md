@@ -34,7 +34,28 @@ This returns a page listing [the package contents][exlist]:
 
 Click on `index.html` to launch the Twine game. You can also view the images or the CSS file, if you so desire.
 
-The front page accept these additional parameters:
+### File URLs
+
+URLs below the root are of two forms:
+
+```
+https://unbox.ifarchive.org/HASH/FILENAME
+https://HASH.unbox.ifarchive.org/HASH/FILENAME
+```
+
+Each Archive path gets a unique hash. In the example above, `games/twine/Absent_Heroes.zip` has the hash `1u3qlfmqda`.
+
+HTML and SVG files are served out of the `HASH.unbox.ifarchive.org` subdomain. This ensures that games cannot wrangle each other's cookies or other stored data.
+
+All other files are considered media files. They are served from the main `unbox.ifarchive.org` domain.
+
+Requests for HTML/SVG in the main domain, and requests for media files in the subdomain, are redirected to the proper destination.
+
+Why this dual treatment? We want to use a CDN (Cloudflare) to cache large files and protect us against high traffic. However, CDNs are normally configured for a single domain at a time. Happily, we can divide our files into media (large, safe to keep on a common domain) and HTML/SVG (small, must be kept in subdomains). The CDN caches media files. HTML/SVG files are cached by an `nginx` process running on the Unbox server.
+
+### Parameters
+
+The front page accepts these additional parameters:
 
 - `&open=FILENAME`: Redirect to a given file within the package. For example:
 
@@ -50,19 +71,21 @@ If the named file is not found, Unbox will look for another file with the same s
 
 - `&search=STRING`
 
-This will return a list of all files in the package whose name contains STRING (case-insensitive).
+This will return a list of all files in the package whose name contains STRING (case-insensitive). For example:
+
+```
+https://unbox.ifarchive.org/?url=%2Fif-archive%2Fgames%2Ftwine%2FAbsent_Heroes.zip&search=n
+```
+
+This [lists two files][exlistsearch]: `anigif_excited-ron-6869-1311881136-43.gif` and `index.html`.
+
+[exlistsearch]: https://unbox.ifarchive.org/?url=https%3A%2F%2Fifarchive.org%2Fif-archive%2Fgames%2Ftwine%2FAbsent_Heroes.zip&search=n
 
 - `&search=STRING&json`
 
 The same, but the list will be in JSON format.
 
-## Details
-
-Note that `index.html` links to a subdomain of `unbox.ifarchive.org`. Each Archive path gets a unique subdomain (via a hash function). This ensures that games cannot wrangle each other's cookies or other stored data.
-
-Only HTML and SVG files get the subdomain treatment. These are the only formats that can include live scripting. All other files are considered media files; they are served from the main `unbox.ifarchive.org` domain. Requests for HTML/SVG in the main domain, and requests for media files in the subdomain, are redirected to the proper destination.
-
-Why this dual treatment? We want to use a CDN (Cloudflare) to cache large files and protect us against high traffic. However, CDNs are normally configured for a single domain at a time. Happily, we can divide our files into media (large, safe to keep on a common domain) and HTML/SVG (small, must be kept in subdomains). The CDN caches media files. HTML/SVG files are cached by an `nginx` process running on the Unbox server.
+### Details
 
 In production, Unbox consists of three layers:
 
