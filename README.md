@@ -30,7 +30,7 @@ This returns a page listing [the package contents][exlist]:
 
 Click on `index.html` to launch the Twine game. You can also view the images or the CSS file, if you so desire.
 
-For a complete description of Unbox's capabilities, see the [specification](./doc/spec.md).
+For a complete description of Unbox's capabilities, see the [specification document](./doc/spec.md).
 
 ## Running Unbox
 
