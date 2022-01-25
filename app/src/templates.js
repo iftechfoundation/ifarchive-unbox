@@ -25,6 +25,7 @@ export function wrapper(opts) {
 <head>
     <meta charset="utf-8">
     <title>${opts.title ? `${escape(opts.title)} - `: ''}IF Archive Unboxing Service</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://ifarchive.org/misc/ifarchive.css">
     ${opts.canonical ? `<link rel="canonical" href="${opts.canonical}">` : ''}
 </head>
@@ -63,9 +64,14 @@ export function form() {
 }
 
 export function list(opts) {
-    const listcontents = opts.files.map(file => `<li><a href="${opts.subdomains && UNSAFE_FILES.test(file) ? `//${opts.hash}.${opts.domain}` : ''}/${opts.hash}/${percent(file)}">${escape(file)}</a></li>`).join('\n')
+    function make_url(file) {
+        return `${opts.subdomains && UNSAFE_FILES.test(file) ? `//${opts.hash}.${opts.domain}` : ''}/${opts.hash}/${percent(file)}`
+    }
+
+    const listcontents = opts.files.map(file => `<li><a href="${make_url(file)}">${escape(file)}</a></li>`).join('\n')
     return `
         <div style="text-align: center">
+            ${opts.starthtml ? `<form style="margin: 25px 0" action="${make_url(opts.starthtml)}"><input style="font-size: 175%" type="submit" value="Start ${escape(opts.starthtml)}"/></form>` : ''}
             <h2>${escape(opts.label)} <a href="https://ifarchive.org/if-archive/${opts.path}">${escape(opts.path)}</a></h2>
             ${listcontents.length ? `<div style="display: inline-block; margin: 0 auto; text-align: left">
                 <ul>${listcontents}</ul>

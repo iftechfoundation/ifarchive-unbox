@@ -140,14 +140,14 @@ export default class UnboxApp {
             }
 
             // Remove the "http://domain/" part
-            let uri = url.replace(VALID_ORIGINS, '')
-            
-            if (!uri.startsWith('if-archive/')) {
+            let file_path = url.replace(VALID_ORIGINS, '')
+
+            if (!file_path.startsWith('if-archive/')) {
                 ctx.throw(403, `Sorry, we don't support files outside the if-archive tree`)
             }
-            
+
             // Remove "if-archive/" part
-            let file_path = uri.substring(11)
+            file_path = file_path.substring(11)
 
             // Handle symlinks
             if (this.index.symlinked_files.has(file_path)) {
@@ -243,6 +243,19 @@ export default class UnboxApp {
                 return
             }
 
+            // Look for one index.html file (or one .html file in general) to show with a Start button
+            const htmlfiles = details.contents.filter(file => /\.html?$/i.test(file))
+            let starthtml
+            if (htmlfiles.length === 1) {
+                starthtml = htmlfiles[0]
+            }
+            if (htmlfiles.length) {
+                const indexfiles = htmlfiles.filter(file => /index\.html?$/i.test(file))
+                if (indexfiles.length === 1) {
+                    starthtml = indexfiles[0]
+                }
+            }
+
             // Show the list of files
             ctx.body = templates.wrapper({
                 canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}`,
@@ -252,6 +265,7 @@ export default class UnboxApp {
                     hash: hash.toString(36),
                     label: 'Contents of',
                     path: file_path,
+                    starthtml,
                     subdomains: this.options.subdomains,
                 }),
                 title: path.basename(file_path),

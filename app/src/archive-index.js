@@ -136,7 +136,7 @@ export default class ArchiveIndex {
                             items = [ items ]
                         }
                         for (const item of items) {
-                            if (item.key == 'unbox-block' && item.value == 'true') {
+                            if (item.key === 'unbox-block' && item.value === 'true') {
                                 meta_blocks.push(hash)
                             }
                         }
