@@ -107,7 +107,7 @@ To run with [Docker][] Compose:
 docker-compose up --build
 ```
 
-See the [options.json](./options.json.md) documentation for configuration details.
+To adjust configuration options, create a file `data/options.json` containing a JSON map. (The `data` directory will be created the first time you start the service.) See the [options.json](./options.json.md) documentation for configuration details.
 
 ## Development
 
