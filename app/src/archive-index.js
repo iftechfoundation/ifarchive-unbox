@@ -22,7 +22,7 @@ import {SUPPORTED_FORMATS} from './common.js'
 import fetch from 'node-fetch'
 import flow from 'xml-flow'
 
-const JSON_VERSION = 3
+const JSON_VERSION = 4
 
 export default class ArchiveIndex {
     constructor(data_dir, options, cache) {
