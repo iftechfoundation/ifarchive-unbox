@@ -61,3 +61,5 @@ Here are all the options you can set in data/options.json
 - open_file_of_same_type: (bool) when opening a specific file, with the `open` query parameter, if no direct match is found, to redirect to another file as long as there is only one that matches the file extension
 - serve_proxy_pac: (bool) whether to serve a proxy.pac file
 - subdomains: (bool) whether to use wildcard subdomains for unsafe files
+
+Note that the `archive_domain` config option is not fully supported. It is used for fetching zip files, but the Unbox page templates and other features are hardcoded to the `ifarchive.org` domain.
