@@ -119,7 +119,7 @@ export default class FileCache {
     }
 
     // Return the path where the given Archive file is downloaded to.
-    // (HASH.zip or HASH.tar.gz in the cache dir.)
+    // (HASH.zip, HASH.tar.gz, HASH.tgz in the cache dir.)
     file_path(hash, type) {
         return path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
     }
@@ -148,7 +148,7 @@ export default class FileCache {
     // Extract a file from a zip, returning a buffer
     async get_file(hash, file_path, type) {
         const zip_path = this.file_path(hash, type)
-        if (type === 'tar.gz') {
+        if (type === 'tar.gz' || type === 'tgz') {
             const results = await execFile('tar', ['-xOzf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
             if (results.stderr.length) {
                 throw new Error(`tar error: ${results.stderr.toString()}`)
@@ -170,7 +170,7 @@ export default class FileCache {
     // Get a file from a zip, returning a stream
     get_file_stream(hash, file_path, type) {
         const zip_path = this.file_path(hash, type)
-        if (type === 'tar.gz') {
+        if (type === 'tar.gz' || type === 'tgz') {
             const child = child_process.spawn('tar', ['-xOzf', zip_path, file_path])
             return child.stdout
         }
@@ -186,7 +186,7 @@ export default class FileCache {
     // Run file on an extracted file
     async get_file_type(hash, file_path, type) {
         const zip_path = this.file_path(hash, type)
-        if (type === 'tar.gz') {
+        if (type === 'tar.gz' || type === 'tgz') {
             const results = await exec(`tar -xOzf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
             if (results.stderr.length) {
                 throw new Error(`tar|file error: ${results.stderr.toString()}`)
@@ -217,7 +217,7 @@ export default class FileCache {
     // List the contents of a zip
     async list_contents(path, type) {
         let output
-        if (type === 'tar.gz') {
+        if (type === 'tar.gz' || type === 'tgz') {
             const tarball_contents = await execFile('tar', ['-tf', path])
             if (tarball_contents.stderr) {
                 throw new Error(`tar error: ${tarball_contents.stderr}`)
