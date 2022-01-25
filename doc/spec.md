@@ -74,9 +74,9 @@ This [lists two files][exlistsearch]: `anigif_excited-ron-6869-1311881136-43.gif
 
 [exlistsearch]: https://unbox.ifarchive.org/?url=https%3A%2F%2Fifarchive.org%2Fif-archive%2Fgames%2Ftwine%2FAbsent_Heroes.zip&search=n
 
-- `&search=STRING&json`
+- `&json`
 
-The same, but the list will be in JSON format.
+When JSON mode is requested the app will return a JSON file for lists, searches, and errors. If the app redirects to a zip file it has no effect.
 
 ### Details
 
