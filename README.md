@@ -1,20 +1,25 @@
 IF Archive Unboxing Service
 ===========================
 
-The Unbox service allows users to view the contents of `zip` and `tar.gz` packages on the [IF Archive][ifarch]. For browser games (such as zipped Twine games), this is all that's needed to make them directly playable.
+The [Unbox service][Unbox] allows users to view the contents of `zip` and `tar.gz` packages on the [IF Archive][ifarch]. For browser games (such as zipped Twine games), this is all that's needed to make them directly playable.
 
 Unbox also allows web interpreters (such as [iplayif.com][iplayif]) to play `zip`ped-up game files.
 
 [ifarch]: https://ifarchive.org/
 [iplayif]: https://iplayif.com/
+[Unbox]: https://unbox.ifarchive.org/
 
-## What's going on?
+## Behavior
 
-Visit the front page of Unbox and enter an Archive URL in the input field. For the sake of example, we will use the URL `https://ifarchive.org/if-archive/games/twine/Absent_Heroes.zip`.
+The front page ([https://unbox.ifarchive.org/][Unbox]) requests an Archive URL or path. This must be the URL of a `zip` or `tar.gz` on the IF Archive. (`http:` and `https:` URLs are both accepted, since they give the same result. You may also omit the domain and enter an absolute path URI, beginning with a slash.)
 
-This must be the URL of a `zip` or `tar.gz` on the IF Archive. (`http:` and `https:` URLs are both accepted, since they give the same result. You may also omit the domain and enter an absolute path URI: `/if-archive/games/twine/Absent_Heroes.zip`.)
+The URL or path accepted as a `?url=` parameter (with the usual query encoding). For example:
 
-Unbox now shows you a [list of the package contents][exlist]:
+```
+https://unbox.ifarchive.org/?url=%2Fif-archive%2Fgames%2Ftwine%2FAbsent_Heroes.zip
+```
+
+This returns a page listing [the package contents][exlist]:
 
 - [anigif_excited-ron-6869-1311881136-43.gif][exron]
 - [cara.css][excara]
@@ -29,13 +34,35 @@ Unbox now shows you a [list of the package contents][exlist]:
 
 Click on `index.html` to launch the Twine game. You can also view the images or the CSS file, if you so desire.
 
+The front page accept these additional parameters:
+
+- `&open=FILENAME`: Redirect to a given file within the package. For example:
+
+```
+https://unbox.ifarchive.org/?url=%2Fif-archive%2Fgames%2Ftwine%2FAbsent_Heroes.zip&open=index.html
+```
+
+This will [launch the game immediately][exlistopen] by redirecting to `index.html` in the contents listing.
+
+[exlistopen]: https://unbox.ifarchive.org/?url=https%3A%2F%2Fifarchive.org%2Fif-archive%2Fgames%2Ftwine%2FAbsent_Heroes.zip&open=index.html
+
+If the named file is not found, Unbox will look for another file with the same suffix. (This is a concession to misnamed links in IFDB. See the `open_file_of_same_type` option.)
+
+- `&search=STRING`
+
+This will return a list of all files in the package whose name contains STRING (case-insensitive).
+
+- `&search=STRING&json`
+
+The same, but the list will be in JSON format.
+
+## Details
+
 Note that `index.html` links to a subdomain of `unbox.ifarchive.org`. Each Archive path gets a unique subdomain (via a hash function). This ensures that games cannot wrangle each other's cookies or other stored data.
 
 Only HTML and SVG files get the subdomain treatment. These are the only formats that can include live scripting. All other files are considered media files; they are served from the main `unbox.ifarchive.org` domain. Requests for HTML/SVG in the main domain, and requests for media files in the subdomain, are redirected to the proper destination.
 
 Why this dual treatment? We want to use a CDN (Cloudflare) to cache large files and protect us against high traffic. However, CDNs are normally configured for a single domain at a time. Happily, we can divide our files into media (large, safe to keep on a common domain) and HTML/SVG (small, must be kept in subdomains). The CDN caches media files. HTML/SVG files are cached by an `nginx` process running on the Unbox server.
-
-## Details
 
 In production, Unbox consists of three layers:
 
