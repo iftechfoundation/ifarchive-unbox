@@ -59,7 +59,7 @@ export function form() {
         <div class="Description">
             <p>Enter the URL of a zip or tar file from the <a href="https://ifarchive.org/">IF Archive</a>:</p>
             <form action="/" method="get">
-                <p><input style="font-size: 175%" type="text" name="url"> <button style="font-size: 175%" type="submit">Submit</button></p>
+                <p><input style="font-size: 175%" type="text" name="url"> <button class="Button UrlButton" type="submit">Submit</button></p>
             </form>
         </div>`
 }
@@ -72,7 +72,7 @@ export function list(opts) {
     const listcontents = opts.files.map(file => `<li><a href="${make_url(file)}">${escape(file)}</a></li>`).join('\n')
     return `
         <div class="Description">
-            ${opts.starthtml ? `<form style="margin: 25px 0" action="${make_url(opts.starthtml)}"><input style="font-size: 175%" type="submit" value="Start ${escape(opts.starthtml)}"/></form>` : ''}
+            ${opts.starthtml ? `<form style="margin: 25px 0" action="${make_url(opts.starthtml)}"><button class="Button StartButton" type="submit">Start ${escape(opts.starthtml)}</button></form>` : ''}
             <h2>${escape(opts.label)} <a href="https://ifarchive.org/if-archive/${opts.path}">${escape(opts.path)}</a></h2>
             ${listcontents.length ? `<div style="display: inline-block; margin: 0 auto; text-align: left">
                 <ul>${listcontents}</ul>
