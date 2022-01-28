@@ -119,7 +119,7 @@ export default class FileCache {
     }
 
     // Return the path where the given Archive file is downloaded to.
-    // (HASH.zip, HASH.tar.gz, HASH.tgz in the cache dir.)
+    // (HASH.zip, HASH.tar.gz, etc in the cache dir.)
     file_path(hash, type) {
         return path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
     }
@@ -155,6 +155,13 @@ export default class FileCache {
             }
             return results.stdout
         }
+        else if (type === 'tar.z') {
+            const results = await execFile('tar', ['-xOZf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
+            if (results.stderr.length) {
+                throw new Error(`tar error: ${results.stderr.toString()}`)
+            }
+            return results.stdout
+        }
         else if (type === 'zip') {
             const results = await execFile('unzip', ['-p', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
             if (results.stderr.length) {
@@ -174,6 +181,10 @@ export default class FileCache {
             const child = child_process.spawn('tar', ['-xOzf', zip_path, file_path])
             return child.stdout
         }
+        else if (type === 'tar.z') {
+            const child = child_process.spawn('tar', ['-xOZf', zip_path, file_path])
+            return child.stdout
+        }
         else if (type === 'zip') {
             const child = child_process.spawn('unzip', ['-p', zip_path, file_path])
             return child.stdout
@@ -188,6 +199,14 @@ export default class FileCache {
         const zip_path = this.file_path(hash, type)
         if (type === 'tar.gz' || type === 'tgz') {
             const results = await exec(`tar -xOzf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
+            if (results.stderr.length) {
+                throw new Error(`tar|file error: ${results.stderr.toString()}`)
+            }
+            // Trim '/dev/stdin:'
+            return results.stdout.trim().substring(12)
+        }
+        else if (type === 'tar.z') {
+            const results = await exec(`tar -xOZf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
             if (results.stderr.length) {
                 throw new Error(`tar|file error: ${results.stderr.toString()}`)
             }
@@ -218,6 +237,13 @@ export default class FileCache {
     async list_contents(path, type) {
         let output
         if (type === 'tar.gz' || type === 'tgz') {
+            const tarball_contents = await execFile('tar', ['-tf', path])
+            if (tarball_contents.stderr) {
+                throw new Error(`tar error: ${tarball_contents.stderr}`)
+            }
+            output = tarball_contents.stdout
+        }
+        else if (type === 'tar.z') {
             const tarball_contents = await execFile('tar', ['-tf', path])
             if (tarball_contents.stderr) {
                 throw new Error(`tar error: ${tarball_contents.stderr}`)
