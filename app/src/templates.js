@@ -30,16 +30,16 @@ export function wrapper(opts) {
     ${opts.canonical ? `<link rel="canonical" href="${opts.canonical}">` : ''}
 </head>
 <body>
-    <div class="Page">
+    <div id="unboxpage" class="Page">
         <div class="Header">
-            <h1><a href="/" style="text-decoration: none">IF Archive Unboxing Service</a></h1>
+            <h1><a href="/">IF Archive Unboxing Service</a></h1>
         </div>
 
         ${opts.content}
 
         <div class="Footer">
-            <p>The IF Archive is a public service of the <a href="https://iftechfoundation.org/">Interactive Fiction Technology Foundation</a>.</p>
-            <p>The IF Archive Unboxing Service source code is on <a href="https://github.com/iftechfoundation/ifarchive-unbox">GitHub</a>.</p>
+            <p>The <a href="https://ifarchive.org/">IF Archive</a> is a public service of the <a href="https://iftechfoundation.org/">Interactive Fiction Technology Foundation</a>.</p>
+            <p><a href="https://github.com/iftechfoundation/ifarchive-unbox">About the Unboxing Service</a></p>
         </div>
     </div>
 </body>
@@ -48,17 +48,18 @@ export function wrapper(opts) {
 
 export function error(msg) {
     return `
-        <div style="text-align: center">
-            <p><b>Error:</b> <pre style="font-size: 1.4em">${escape(msg)}</pre></p>
+        <div class="Description">
+            <p><b>Error:</b></p>
+            <p class="Error">${escape(msg)}</p>
         </div>`
 }
 
 export function form() {
     return `
-        <div style="text-align: center">
-            <p>Enter the URL of a zip file from the <a href="https://ifarchive.org/">IF Archive</a> to begin:</p>
-            <form action="/" method="get">
-                <p><input style="font-size: 175%" type="text" name="url"> <button style="font-size: 175%" type="submit">Submit</button></p>
+        <div class="Description">
+            <p>Enter the URL of a zip or tar file from the <a href="https://ifarchive.org/">IF Archive</a>:</p>
+            <form class="InputForm" action="/" method="get">
+                <p><input class="InputLine" type="text" name="url"> <button class="Button UrlButton" type="submit">Submit</button></p>
             </form>
         </div>`
 }
@@ -70,10 +71,10 @@ export function list(opts) {
 
     const listcontents = opts.files.map(file => `<li><a href="${make_url(file)}">${escape(file)}</a></li>`).join('\n')
     return `
-        <div style="text-align: center">
-            ${opts.starthtml ? `<form style="margin: 25px 0" action="${make_url(opts.starthtml)}"><input style="font-size: 175%" type="submit" value="Start ${escape(opts.starthtml)}"/></form>` : ''}
+        <div class="Description">
+            ${opts.starthtml ? `<form class="StartForm" action="${make_url(opts.starthtml)}"><button class="Button StartButton" type="submit">Open ${escape(opts.starthtml)}</button></form>` : ''}
             <h2>${escape(opts.label)} <a href="https://ifarchive.org/if-archive/${opts.path}">${escape(opts.path)}</a></h2>
-            ${listcontents.length ? `<div style="display: inline-block; margin: 0 auto; text-align: left">
+            ${listcontents.length ? `<div class="ListBox">
                 <ul>${listcontents}</ul>
             </div>` : '<p>No matching files</p>'}
             ${opts.alllink ? `<p><a href="/?url=https://ifarchive.org/if-archive/${opts.path}">See all files</a></p>` : ''}
