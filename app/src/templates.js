@@ -32,7 +32,7 @@ export function wrapper(opts) {
 <body>
     <div id="unboxpage" class="Page">
         <div class="Header">
-            <h1><a href="/" style="text-decoration: none">IF Archive Unboxing Service</a></h1>
+            <h1><a href="/">IF Archive Unboxing Service</a></h1>
         </div>
 
         ${opts.content}
@@ -74,7 +74,7 @@ export function list(opts) {
         <div class="Description">
             ${opts.starthtml ? `<form style="margin: 25px 0" action="${make_url(opts.starthtml)}"><button class="Button StartButton" type="submit">Start ${escape(opts.starthtml)}</button></form>` : ''}
             <h2>${escape(opts.label)} <a href="https://ifarchive.org/if-archive/${opts.path}">${escape(opts.path)}</a></h2>
-            ${listcontents.length ? `<div style="display: inline-block; margin: 0 auto; text-align: left">
+            ${listcontents.length ? `<div class="ListBox">
                 <ul>${listcontents}</ul>
             </div>` : '<p>No matching files</p>'}
             ${opts.alllink ? `<p><a href="/?url=https://ifarchive.org/if-archive/${opts.path}">See all files</a></p>` : ''}
