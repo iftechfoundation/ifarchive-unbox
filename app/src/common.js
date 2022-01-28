@@ -38,7 +38,7 @@ export const COMMON_FILE_TYPES = {
 }
 
 // Regex: what package formats do we handle?
-export const SUPPORTED_FORMATS = /\.(tar\.gz|tgz|zip)$/i
+export const SUPPORTED_FORMATS = /\.(tar\.gz|tgz|tar\.z|zip)$/i
 
 // List of types where we need to do additional work to get the character set headers right.
 export const TYPES_TO_DETECT_BETTER = [

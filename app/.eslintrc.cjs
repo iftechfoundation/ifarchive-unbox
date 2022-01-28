@@ -11,7 +11,7 @@ module.exports = {
     root: true,
     rules: {
         eqeqeq: ['error', 'always', {null: 'ignore'}],
-        indent: ['error', 4, {MemberExpression: 'off'}],
+        indent: ['error', 4, {MemberExpression: 'off', SwitchCase: 1}],
         'linebreak-style': ['error', 'unix'],
         'no-empty': ['off'],
         'no-var': ['error'],

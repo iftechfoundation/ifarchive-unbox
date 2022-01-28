@@ -1,6 +1,6 @@
 ## What Unbox does
 
-The front page ([https://unbox.ifarchive.org/][Unbox]) requests an Archive URL or path. This must be the URL of a `zip`, `tar.gz`, or `.tgz` on the IF Archive. (`http:` and `https:` URLs are both accepted, since they give the same result. You may also omit the domain and enter an absolute path URI, beginning with a slash.)
+The front page ([https://unbox.ifarchive.org/][Unbox]) requests an Archive URL or path. This must be the URL of a `zip`, `tar.gz`, `tgz`, or `tar.Z` on the IF Archive. (`http:` and `https:` URLs are both accepted, since they give the same result. You may also omit the domain and enter an absolute path URI, beginning with a slash.)
 
 [ifarch]: https://ifarchive.org/
 [iplayif]: https://iplayif.com/
@@ -82,7 +82,7 @@ When JSON mode is requested the app will return a JSON file for lists, searches,
 
 In production, Unbox consists of three layers:
 
-- `ifarchive-unbox` is the app itself. It maintains a cache of `zip/tgz/tar.gz` files downloaded from [ifarchive.org][ifarch]. It also keeps a local copy of the Archive's `Master-Index.xml` file.
+- `ifarchive-unbox` is the app itself. It maintains a cache of `zip/tgz/tar.gz/tar.Z` files downloaded from [ifarchive.org][ifarch]. It also keeps a local copy of the Archive's `Master-Index.xml` file.
 - `nginx` is a caching web server that runs in front of `ifarchive-unbox`. This caches HTML/SVG files.
 - A CDN such as CloudFlare is configured in front of `nginx`. This handles caching of media files.
 
