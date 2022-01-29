@@ -182,7 +182,7 @@ export default class UnboxApp {
                 }
                 if (results.length === 1) {
                     ctx.status = 301
-                    ctx.redirect(`/${hash.toString(36)}/${results[0]}`)
+                    ctx.redirect(`/${hash}/${results[0]}`)
                     return
                 }
                 // No matching file, but if enabled we can look for another file of the same type
@@ -191,7 +191,7 @@ export default class UnboxApp {
                     const results = details.contents.filter(file => same_type_regexp.test(file))
                     if (results.length === 1) {
                         ctx.status = 301
-                        ctx.redirect(`/${hash.toString(36)}/${results[0]}`)
+                        ctx.redirect(`/${hash}/${results[0]}`)
                         return
                     }
                 }
@@ -213,7 +213,7 @@ export default class UnboxApp {
                 if ('json' in query) {
                     ctx.body = {
                         files: results,
-                        hash: hash.toString(36),
+                        hash: hash,
                     }
                 }
                 else {
@@ -223,7 +223,7 @@ export default class UnboxApp {
                             alllink: true,
                             domain: this.options.domain,
                             files: results,
-                            hash: hash.toString(36),
+                            hash: hash,
                             label: `Files matching ${query.search} in`,
                             path: file_path,
                             subdomains: this.options.subdomains,
@@ -238,7 +238,7 @@ export default class UnboxApp {
             if ('json' in query) {
                 ctx.body = {
                     files: details.contents,
-                    hash: hash.toString(36),
+                    hash: hash,
                 }
                 return
             }
@@ -262,7 +262,7 @@ export default class UnboxApp {
                 content: templates.list({
                     domain: this.options.domain,
                     files: details.contents,
-                    hash: hash.toString(36),
+                    hash: hash,
                     label: 'Contents of',
                     path: file_path,
                     starthtml,
@@ -278,11 +278,11 @@ export default class UnboxApp {
         if (!path_parts) {
             ctx.throw(400, 'This is not a valid file')
         }
-        const hash_string = path_parts[1]
-        const hash = parseInt(hash_string, 36)
+        const hash = path_parts[1]
+        // We could validate the hash format here, but only valid hashes are in index.hash_to_path.
         const zip_path = this.index.hash_to_path.get(hash)
         if (!zip_path) {
-            ctx.throw(404, `Unknown file hash: ${hash_string}`)
+            ctx.throw(404, `Unknown file hash: ${hash}`)
         }
 
         // Redirect folder views back to the index
@@ -299,7 +299,7 @@ export default class UnboxApp {
         }
 
         // Check for non-matching subdomain
-        if (this.options.subdomains && UNSAFE_FILES.test(file_path) && !ctx.hostname.startsWith(hash_string)) {
+        if (this.options.subdomains && UNSAFE_FILES.test(file_path) && !ctx.hostname.startsWith(hash)) {
             ctx.throw(400, `Incorrect subdomain`)
         }
 

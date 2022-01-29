@@ -54,7 +54,7 @@ export default class FileCache {
         await Promise.all(files.map(async file => {
             const file_path = path.join(this.cache_dir, file)
             const parts = /(\w+)\.(.+)/.exec(file)
-            const hash = parseInt(parts[1], 36)
+            const hash = parts[1]
             const stat = await fs.stat(file_path)
             const date = +stat.mtime
             const size = stat.size
@@ -121,7 +121,7 @@ export default class FileCache {
     // Return the path where the given Archive file is downloaded to.
     // (HASH.zip, HASH.tar.gz, etc in the cache dir.)
     file_path(hash, type) {
-        return path.join(this.cache_dir, `${hash.toString(36)}.${type}`)
+        return path.join(this.cache_dir, `${hash}.${type}`)
     }
 
     // Get a file out of the cache, or download it
@@ -256,7 +256,7 @@ export default class FileCache {
         for (const [hash, entry] of this.cache) {
             if (entry instanceof CacheEntry && entry.date !== data.get(hash))
             {
-                console.log(`Removing outdated cache file ${hash.toString(36)}.${entry.type} (${this.index.hash_to_path.get(hash)})`)
+                console.log(`Removing outdated cache file ${hash}.${entry.type} (${this.index.hash_to_path.get(hash)})`)
                 this.cache.delete(hash)
                 const oldpos = this.lru.indexOf(hash)
                 this.lru.splice(oldpos, 1)
