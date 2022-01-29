@@ -65,6 +65,8 @@ export default class FileCache {
             this.lru.push(hash)
             this.size += size
         }))
+
+        console.log(`Cache initialized with ${this.lru.length} entries, ${this.size} bytes total`)
     }
 
     // Download and set up a cache entry
@@ -131,6 +133,8 @@ export default class FileCache {
             this.hit(hash)
             return this.cache.get(hash)
         }
+
+        console.log(`Downloading cache entry ${hash} (${this.index.hash_to_path.get(hash)})`)
 
         // We add the promise to the cache even if it's pending. That way, future callers will get the same promise and will wait in parallel on it.
         // (It would be bad if two callers got different promises to the same hash, which then started to download to the same location.)
