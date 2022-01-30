@@ -22,7 +22,7 @@ import {SUPPORTED_FORMATS} from './common.js'
 import fetch from 'node-fetch'
 import flow from 'xml-flow'
 
-const JSON_VERSION = 5
+const JSON_VERSION = 6
 
 export default class ArchiveIndex {
     constructor(data_dir, options, cache) {
@@ -126,7 +126,8 @@ export default class ArchiveIndex {
                 // Regular files
                 else if (SUPPORTED_FORMATS.test(path)) {
                     // 48 bits of the sha512 hash of the path
-                    const hash = parseInt(crypto.createHash('sha512').update(path).digest('hex').substring(0, 12), 16)
+                    let hash = parseInt(crypto.createHash('sha512').update(path).digest('hex').substring(0, 12), 16)
+                    hash = hash.toString(36).padStart(10, '0')
                     const date = +(new Date(`${file.date} UTC`))
                     files.push([hash, path, date])
 
