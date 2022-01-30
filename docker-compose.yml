@@ -3,6 +3,8 @@ services:
     build: ./app
     environment:
       DATA_DIR: /home/data
+    logging:
+      driver: local
     restart: always
     volumes:
       - ./data:/home/data
@@ -11,6 +13,8 @@ services:
     build: ./certbot
     environment:
       DATA_DIR: /home/data
+    logging:
+      driver: local
     volumes:
       - ./data:/home/data
       - ./data/certbot:/etc/letsencrypt
@@ -19,6 +23,8 @@ services:
     build: ./nginx
     environment:
       DATA_DIR: /home/data
+    logging:
+      driver: local
     ports:
       - "80:80"
       - "443:443"
