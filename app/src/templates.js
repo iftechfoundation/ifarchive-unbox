@@ -19,6 +19,10 @@ function percent(path) {
     return escape(path).replaceAll('?', '%3F')
 }
 
+function slashbreak(path) {
+    return path.replaceAll('/', '/<wbr>')
+}
+
 export function wrapper(opts) {
     return `<!DOCTYPE html>
 <html>
@@ -69,11 +73,11 @@ export function list(opts) {
         return `${opts.subdomains && UNSAFE_FILES.test(file) ? `//${opts.hash}.${opts.domain}` : ''}/${opts.hash}/${percent(file)}`
     }
 
-    const listcontents = opts.files.map(file => `<li><a href="${make_url(file)}">${escape(file)}</a></li>`).join('\n')
+    const listcontents = opts.files.map(file => `<li><a href="${make_url(file)}">${slashbreak(escape(file))}</a></li>`).join('\n')
     return `
         <div class="Description">
-            ${opts.starthtml ? `<form class="StartForm" action="${make_url(opts.starthtml)}"><button class="Button StartButton" type="submit">Open ${escape(opts.starthtml)}</button></form>` : ''}
-            <h2>${escape(opts.label)} <a href="https://ifarchive.org/if-archive/${opts.path}">${escape(opts.path)}</a></h2>
+            ${opts.starthtml ? `<form class="StartForm" action="${make_url(opts.starthtml)}"><button class="Button StartButton" type="submit">Open ${slashbreak(escape(opts.starthtml))}</button></form>` : ''}
+            <h2>${escape(opts.label)} <a href="https://ifarchive.org/if-archive/${opts.path}">${slashbreak(escape(opts.path))}</a></h2>
             ${listcontents.length ? `<div class="ListBox">
                 <ul>${listcontents}</ul>
             </div>` : '<p>No matching files</p>'}
