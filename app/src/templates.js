@@ -19,7 +19,7 @@ function percent(path) {
     return escape(path).replaceAll('?', '%3F')
 }
 
-function breakslash(path) {
+function slashbreak(path) {
     return path.replaceAll('/', '/<wbr>')
 }
 
