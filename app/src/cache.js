@@ -46,7 +46,7 @@ function unzip_error(err) {
     if (err.signal) {
         return { failed:true, stdout:err.stdout, stderr:`SIGNAL ${err.signal}\n${err.stderr}` }
     }
-    // Special case: unzip return status 1 for "unzip succeeded with warnings". (See man page.) We consider this to be a success.
+    // Special case: unzip returns status 1 for "unzip succeeded with warnings". (See man page.) We consider this to be a success.
     // We see this with certain zip files and warnings like "128 extra bytes at beginning or within zipfile".
     if (err.code != 0 && err.code != 1) {
         return { failed:true, stdout:err.stdout, stderr:err.stderr }
