@@ -24,6 +24,26 @@ import {SUPPORTED_FORMATS, escape_shell_single_quoted} from './common.js'
 const exec = util.promisify(child_process.exec)
 const execFile = util.promisify(child_process.execFile)
 
+function untar_error(err) {
+    if (err.signal) {
+        return { failed:true, stdout:err.stdout, stderr:`SIGNAL ${err.signal}\n${err.stderr}` }
+    }
+    if (err.code != 0) {
+        return { failed:true, stdout:err.stdout, stderr:err.stderr }
+    }
+    return { stdout:err.stdout, stderr:err.stderr }
+}
+
+function unzip_error(err) {
+    if (err.signal) {
+        return { failed:true, stdout:err.stdout, stderr:`SIGNAL ${err.signal}\n${err.stderr}` }
+    }
+    if (err.code != 0) {
+        return { failed:true, stdout:err.stdout, stderr:err.stderr }
+    }
+    return { stdout:err.stdout, stderr:err.stderr }
+}
+
 class CacheEntry {
     constructor (contents, date, size, type) {
         this.contents = contents
@@ -166,20 +186,23 @@ export default class FileCache {
             case 'tar.gz':
             case 'tgz':
                 command = 'tar'
-                results = await execFile('tar', ['-xOzf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
+                results = await execFile('tar', ['-xOzf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer}).catch(untar_error)
                 break
             case 'tar.z':
                 command = 'tar'
-                results = await execFile('tar', ['-xOZf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
+                results = await execFile('tar', ['-xOZf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer}).catch(untar_error)
                 break
             case 'zip':
                 command = 'unzip'
-                results = await execFile('unzip', ['-p', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
+                results = await execFile('unzip', ['-p', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer}).catch(unzip_error)
                 break
             default:
                 throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr.length) {
+            console.log(`${command} error: ${results.stderr.toString()}`)
+        }
+        if (results.failed) {
             throw new Error(`${command} error: ${results.stderr.toString()}`)
         }
         return results.stdout
@@ -214,20 +237,23 @@ export default class FileCache {
             case 'tar.gz':
             case 'tgz':
                 command = 'tar'
-                results = await exec(`tar -xOzf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
+                results = await exec(`tar -xOzf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`).catch(untar_error)
                 break
             case 'tar.z':
                 command = 'tar'
-                results = await exec(`tar -xOZf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
+                results = await exec(`tar -xOZf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`).catch(untar_error)
                 break
             case 'zip':
                 command = 'unzip'
-                results = await exec(`unzip -p ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
+                results = await exec(`unzip -p ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`).catch(unzip_error)
                 break
             default:
                 throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr.length) {
+            console.log(`${command} error: ${results.stderr.toString()}`)
+        }
+        if (results.failed) {
             throw new Error(`${command}|file error: ${results.stderr.toString()}`)
         }
         // Trim '/dev/stdin:'
@@ -249,16 +275,19 @@ export default class FileCache {
             case 'tar.z':
             case 'tgz':
                 command = 'tar'
-                results = await execFile('tar', ['-tf', path])
+                results = await execFile('tar', ['-tf', path]).catch(untar_error)
                 break
             case 'zip':
                 command = 'unzip'
-                results = await execFile('unzip', ['-Z1', path])
+                results = await execFile('unzip', ['-Z1', path]).catch(unzip_error)
                 break
             default:
                 throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr) {
+            console.log(`${command} error: ${results.stderr.toString()}`)
+        }
+        if (results.failed) {
             throw new Error(`${command} error: ${results.stderr}`)
         }
         return results.stdout.trim().split('\n').filter(line => !line.endsWith('/')).sort()
