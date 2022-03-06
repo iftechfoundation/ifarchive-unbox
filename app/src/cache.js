@@ -24,6 +24,13 @@ import {SUPPORTED_FORMATS, escape_shell_single_quoted} from './common.js'
 const exec = util.promisify(child_process.exec)
 const execFile = util.promisify(child_process.execFile)
 
+/* Promise-rejection handlers for untar/unzip. These return objects of the
+   form { stdout, stderr } or { failed, stdout, stderr }.
+
+   The caller should log stderr if it exists, but consider the call to
+   have succeeded unless failed is true.
+*/
+
 function untar_error(err) {
     if (err.signal) {
         return { failed:true, stdout:err.stdout, stderr:`SIGNAL ${err.signal}\n${err.stderr}` }
@@ -31,6 +38,7 @@ function untar_error(err) {
     if (err.code != 0) {
         return { failed:true, stdout:err.stdout, stderr:err.stderr }
     }
+    // For certain old tar files, stderr contains an error like "A lone zero block at..." But err.code is zero so we consider it success.
     return { stdout:err.stdout, stderr:err.stderr }
 }
 
@@ -38,6 +46,8 @@ function unzip_error(err) {
     if (err.signal) {
         return { failed:true, stdout:err.stdout, stderr:`SIGNAL ${err.signal}\n${err.stderr}` }
     }
+    // Special case: unzip return status 1 for "unzip succeeded with warnings". (See man page.) We consider this to be a success.
+    // We see this with certain zip files and warnings like "128 extra bytes at beginning or within zipfile".
     if (err.code != 0 && err.code != 1) {
         return { failed:true, stdout:err.stdout, stderr:err.stderr }
     }
