@@ -177,7 +177,7 @@ export default class FileCache {
                 results = await execFile('unzip', ['-p', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
                 break
             default:
-                throw new Error('Other archive format not yet supported')
+                throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr.length) {
             throw new Error(`${command} error: ${results.stderr.toString()}`)
@@ -201,7 +201,7 @@ export default class FileCache {
                 child = child_process.spawn('unzip', ['-p', zip_path, file_path])
                 break
             default:
-                throw new Error('Other archive format not yet supported')
+                throw new Error(`Archive format ${type} not yet supported`)
         }
         return child.stdout
     }
@@ -225,7 +225,7 @@ export default class FileCache {
                 results = await exec(`unzip -p ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
                 break
             default:
-                throw new Error('Other archive format not yet supported')
+                throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr.length) {
             throw new Error(`${command}|file error: ${results.stderr.toString()}`)
@@ -256,7 +256,7 @@ export default class FileCache {
                 results = await execFile('unzip', ['-Z1', path])
                 break
             default:
-                throw new Error('Other archive format not yet supported')
+                throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr) {
             throw new Error(`${command} error: ${results.stderr}`)
