@@ -53,6 +53,8 @@ export default class UnboxApp {
                     })
                 }
                 if (ctx.status < 400 || ctx.status > 404) {
+                    const errdate = new Date()
+                    console.log(`Internal error: (${errdate.toISOString()}): ${ctx.url}`)
                     ctx.app.emit('error', err, ctx)
                 }
             }
