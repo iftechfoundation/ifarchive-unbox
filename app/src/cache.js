@@ -84,13 +84,13 @@ export default class FileCache {
         const url = `https://${this.options.archive_domain}/if-archive/${this.index.hash_to_path.get(hash)}`
         const type = SUPPORTED_FORMATS.exec(url)[1].toLowerCase()
         const cache_path = this.file_path(hash, type)
-        const details = await execFile('curl', [encodeURI(url), '-o', cache_path, '-s', '-S', '-D', '-'])
-        if (details.stderr) {
-            throw new Error(`curl error: ${details.stderr}`)
+        const results = await execFile('curl', [encodeURI(url), '-o', cache_path, '-s', '-S', '-D', '-'])
+        if (results.stderr) {
+            throw new Error(`curl error: ${results.stderr}`)
         }
 
         // Parse the date
-        const date_header = /last-modified:\s+\w+,\s+(\d+\s+\w+\s+\d+)/.exec(details.stdout)
+        const date_header = /last-modified:\s+\w+,\s+(\d+\s+\w+\s+\d+)/.exec(results.stdout)
         if (!date_header) {
             throw new Error('Could not parse last-modified header')
         }
