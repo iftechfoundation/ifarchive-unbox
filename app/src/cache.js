@@ -59,11 +59,20 @@ export default class FileCache {
             const date = +stat.mtime
             const size = stat.size
             const type = parts[2]
-            const contents = await this.list_contents(file_path, type)
-            const entry = new CacheEntry(contents, date, size, type)
-            this.cache.set(hash, entry)
-            this.lru.push(hash)
-            this.size += size
+            try {
+                const contents = await this.list_contents(file_path, type)
+                const entry = new CacheEntry(contents, date, size, type)
+                this.cache.set(hash, entry)
+                this.lru.push(hash)
+                this.size += size
+            }
+            catch (err) {
+                console.log(`Removing unreadable cache file ${file}: ${err}`)
+                try {
+                    await fs.rm(file_path)
+                }
+                catch (_) {}
+            }
         }))
 
         console.log(`Cache initialized with ${this.lru.length} entries, ${this.size} bytes total`)
