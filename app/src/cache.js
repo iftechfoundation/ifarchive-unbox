@@ -200,10 +200,10 @@ export default class FileCache {
                 throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr.length) {
-            console.log(`${command} error: ${results.stderr.toString()}`)
+            console.log(`${file_path}: ${command} error: ${results.stderr.toString()}`)
         }
         if (results.failed) {
-            throw new Error(`${command} error: ${results.stderr.toString()}`)
+            throw new Error(`${file_path}: ${command} error: ${results.stderr.toString()}`)
         }
         return results.stdout
     }
@@ -251,10 +251,10 @@ export default class FileCache {
                 throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr.length) {
-            console.log(`${command} error: ${results.stderr.toString()}`)
+            console.log(`${file_path}: ${command} error: ${results.stderr.toString()}`)
         }
         if (results.failed) {
-            throw new Error(`${command}|file error: ${results.stderr.toString()}`)
+            throw new Error(`${file_path}: ${command}|file error: ${results.stderr.toString()}`)
         }
         // Trim '/dev/stdin:'
         return results.stdout.trim().substring(12)
@@ -285,10 +285,10 @@ export default class FileCache {
                 throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr) {
-            console.log(`${command} error: ${results.stderr.toString()}`)
+            console.log(`${path}: ${command} error: ${results.stderr.toString()}`)
         }
         if (results.failed) {
-            throw new Error(`${command} error: ${results.stderr}`)
+            throw new Error(`${path}: ${command} error: ${results.stderr}`)
         }
         return results.stdout.trim().split('\n').filter(line => !line.endsWith('/')).sort()
     }
