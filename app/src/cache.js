@@ -38,7 +38,7 @@ function unzip_error(err) {
     if (err.signal) {
         return { failed:true, stdout:err.stdout, stderr:`SIGNAL ${err.signal}\n${err.stderr}` }
     }
-    if (err.code != 0) {
+    if (err.code != 0 && err.code != 1) {
         return { failed:true, stdout:err.stdout, stderr:err.stderr }
     }
     return { stdout:err.stdout, stderr:err.stderr }
