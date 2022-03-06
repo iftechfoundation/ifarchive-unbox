@@ -56,3 +56,7 @@ If you modify the source code, you must bring the service down and back up to se
 docker-compose down
 docker-compose up --build
 ```
+
+The server is built on the [Koa][] web framework.
+
+[Koa]: https://koajs.com/
