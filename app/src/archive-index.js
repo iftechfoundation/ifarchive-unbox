@@ -187,6 +187,8 @@ export default class ArchiveIndex {
             this.blocked_files.add(hash)
         }
 
+        console.log(`ArchiveIndex: found ${this.hash_to_path.size} hash entries, ${this.symlinked_dirs.size} symlinked dirs, ${this.symlinked_files.size} symlinked files, ${this.blocked_files.size} blocked files`)
+
         // Purge the cache of old files
         await this.cache.purge(hash_to_date)
     }
