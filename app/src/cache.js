@@ -265,6 +265,7 @@ export default class FileCache {
     }
 
     // Purge out of date files
+    // The argument is a map of hash->timestamp, extracted from the Master-Index we just loaded
     async purge(data) {
         for (const [hash, entry] of this.cache) {
             if (entry instanceof CacheEntry && entry.date !== data.get(hash))
