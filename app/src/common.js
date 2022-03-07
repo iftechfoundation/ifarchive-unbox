@@ -57,7 +57,3 @@ export function escape_regexp(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // $& means the whole matched string
 }
 
-// Escape for use inside of a single quoted shell argument
-export function escape_shell_single_quoted(str) {
-    return str.replace(/'/g, `'\\''`)
-}
