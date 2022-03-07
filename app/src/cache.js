@@ -92,7 +92,7 @@ function spawn_pipe_file_cb(command, args, callback) {
     })
 
     // Ignore errors sending data to file stdin. (It likes to close its input, which results in an EPIPE error.)
-    fileproc.stdin.on('error', _ => {})
+    fileproc.stdin.on('error', () => {})
     // Add stdout and stderr to our accumulators.
     fileproc.stdout.on('data', data => { stdout += data })
     fileproc.stderr.on('data', data => { stderr += data })
