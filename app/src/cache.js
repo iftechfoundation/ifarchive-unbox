@@ -19,7 +19,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import util from 'util'
 
-import {SUPPORTED_FORMATS, escape_shell_single_quoted} from './common.js'
+import {SUPPORTED_FORMATS} from './common.js'
 
 const exec = util.promisify(child_process.exec)
 const execFile = util.promisify(child_process.execFile)
