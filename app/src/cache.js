@@ -35,7 +35,7 @@ function untar_error(err) {
     if (err.signal) {
         return { failed:true, stdout:err.stdout, stderr:`SIGNAL ${err.signal}\n${err.stderr}` }
     }
-    if (err.code != 0) {
+    if (err.code !== 0) {
         return { failed:true, stdout:err.stdout, stderr:err.stderr }
     }
     // For certain old tar files, stderr contains an error like "A lone zero block at..." But err.code is zero so we consider it success.
@@ -48,7 +48,7 @@ function unzip_error(err) {
     }
     // Special case: unzip returns status 1 for "unzip succeeded with warnings". (See man page.) We consider this to be a success.
     // We see this with certain zip files and warnings like "128 extra bytes at beginning or within zipfile".
-    if (err.code != 0 && err.code != 1) {
+    if (err.code !== 0 && err.code !== 1) {
         return { failed:true, stdout:err.stdout, stderr:err.stderr }
     }
     return { stdout:err.stdout, stderr:err.stderr }
