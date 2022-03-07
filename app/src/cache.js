@@ -80,14 +80,14 @@ function spawn_pipe_file_cb(command, args, callback) {
     let uncode = null
 
     // Send unzip stdout to file stdin
-    unproc.stdout.on('data', data => { fileproc.stdin.write(data); })
+    unproc.stdout.on('data', data => { fileproc.stdin.write(data) })
     // Add stderr to our accumulator.
-    unproc.stderr.on('data', data => { stderr += data; })
+    unproc.stderr.on('data', data => { stderr += data })
     unproc.on('close', code => {
         // Record the status code of the unzip process
         uncode = code
         // Again, unzip code 1 is okay
-        if (command == 'unzip' && code == 1)
+        if (command === 'unzip' && code === 1)
             uncode = 0
         fileproc.stdin.end()
     })
@@ -95,8 +95,8 @@ function spawn_pipe_file_cb(command, args, callback) {
     // Ignore errors sending data to file stdin. (It likes to close its input, which results in an EPIPE error.)
     fileproc.stdin.on('error', data => {})
     // Add stdout and stderr to our accumulators.
-    fileproc.stdout.on('data', data => { stdout += data; })
-    fileproc.stderr.on('data', data => { stderr += data; })
+    fileproc.stdout.on('data', data => { stdout += data })
+    fileproc.stderr.on('data', data => { stderr += data })
     
     fileproc.on('close', code => {
         // All done; call the callback. Fill in the first argument for failure, second arguent for success.
@@ -305,15 +305,15 @@ export default class FileCache {
             case 'tar.gz':
             case 'tgz':
                 command = 'tar|file'
-                results = await spawn_pipe_file('tar', ['-xOzf', zip_path, file_path]).catch(err => { return err; })
+                results = await spawn_pipe_file('tar', ['-xOzf', zip_path, file_path]).catch(err => { return err })
                 break
             case 'tar.z':
                 command = 'tar|file'
-                results = await spawn_pipe_file('tar', ['-xOZf', zip_path, file_path]).catch(err => { return err; })
+                results = await spawn_pipe_file('tar', ['-xOZf', zip_path, file_path]).catch(err => { return err })
                 break
             case 'zip':
                 command = 'unzip|file'
-                results = await spawn_pipe_file('unzip', ['-p', zip_path, file_path]).catch(err => { return err; })
+                results = await spawn_pipe_file('unzip', ['-p', zip_path, file_path]).catch(err => { return err })
                 break
             default:
                 throw new Error(`Archive format ${type} not yet supported`)
