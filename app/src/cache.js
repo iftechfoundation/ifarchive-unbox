@@ -21,7 +21,6 @@ import util from 'util'
 
 import {SUPPORTED_FORMATS} from './common.js'
 
-const exec = util.promisify(child_process.exec)
 const execFile = util.promisify(child_process.execFile)
 
 /* Promise-rejection handlers for untar/unzip. These return objects of the
@@ -93,7 +92,7 @@ function spawn_pipe_file_cb(command, args, callback) {
     })
 
     // Ignore errors sending data to file stdin. (It likes to close its input, which results in an EPIPE error.)
-    fileproc.stdin.on('error', data => {})
+    fileproc.stdin.on('error', _ => {})
     // Add stdout and stderr to our accumulators.
     fileproc.stdout.on('data', data => { stdout += data })
     fileproc.stderr.on('data', data => { stderr += data })
