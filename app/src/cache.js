@@ -24,6 +24,36 @@ import {SUPPORTED_FORMATS, escape_shell_single_quoted} from './common.js'
 const exec = util.promisify(child_process.exec)
 const execFile = util.promisify(child_process.execFile)
 
+/* Promise-rejection handlers for untar/unzip. These return objects of the
+   form { stdout, stderr } or { failed, stdout, stderr }.
+
+   The caller should log stderr if it exists, but consider the call to
+   have succeeded unless failed is true.
+*/
+
+function untar_error(err) {
+    if (err.signal) {
+        return { failed:true, stdout:err.stdout, stderr:`SIGNAL ${err.signal}\n${err.stderr}` }
+    }
+    if (err.code !== 0) {
+        return { failed:true, stdout:err.stdout, stderr:err.stderr }
+    }
+    // For certain old tar files, stderr contains an error like "A lone zero block at..." But err.code is zero so we consider it success.
+    return { stdout:err.stdout, stderr:err.stderr }
+}
+
+function unzip_error(err) {
+    if (err.signal) {
+        return { failed:true, stdout:err.stdout, stderr:`SIGNAL ${err.signal}\n${err.stderr}` }
+    }
+    // Special case: unzip returns status 1 for "unzip succeeded with warnings". (See man page.) We consider this to be a success.
+    // We see this with certain zip files and warnings like "128 extra bytes at beginning or within zipfile".
+    if (err.code !== 0 && err.code !== 1) {
+        return { failed:true, stdout:err.stdout, stderr:err.stderr }
+    }
+    return { stdout:err.stdout, stderr:err.stderr }
+}
+
 class CacheEntry {
     constructor (contents, date, size, type) {
         this.contents = contents
@@ -84,13 +114,13 @@ export default class FileCache {
         const url = `https://${this.options.archive_domain}/if-archive/${this.index.hash_to_path.get(hash)}`
         const type = SUPPORTED_FORMATS.exec(url)[1].toLowerCase()
         const cache_path = this.file_path(hash, type)
-        const details = await execFile('curl', [encodeURI(url), '-o', cache_path, '-s', '-S', '-D', '-'])
-        if (details.stderr) {
-            throw new Error(`curl error: ${details.stderr}`)
+        const results = await execFile('curl', [encodeURI(url), '-o', cache_path, '-s', '-S', '-D', '-'])
+        if (results.stderr) {
+            throw new Error(`curl error: ${results.stderr}`)
         }
 
         // Parse the date
-        const date_header = /last-modified:\s+\w+,\s+(\d+\s+\w+\s+\d+)/.exec(details.stdout)
+        const date_header = /last-modified:\s+\w+,\s+(\d+\s+\w+\s+\d+)/.exec(results.stdout)
         if (!date_header) {
             throw new Error('Could not parse last-modified header')
         }
@@ -166,21 +196,24 @@ export default class FileCache {
             case 'tar.gz':
             case 'tgz':
                 command = 'tar'
-                results = await execFile('tar', ['-xOzf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
+                results = await execFile('tar', ['-xOzf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer}).catch(untar_error)
                 break
             case 'tar.z':
                 command = 'tar'
-                results = await execFile('tar', ['-xOZf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
+                results = await execFile('tar', ['-xOZf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer}).catch(untar_error)
                 break
             case 'zip':
                 command = 'unzip'
-                results = await execFile('unzip', ['-p', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer})
+                results = await execFile('unzip', ['-p', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer}).catch(unzip_error)
                 break
             default:
-                throw new Error('Other archive format not yet supported')
+                throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr.length) {
-            throw new Error(`${command} error: ${results.stderr.toString()}`)
+            console.log(`${file_path}: ${command} error: ${results.stderr.toString()}`)
+        }
+        if (results.failed) {
+            throw new Error(`${file_path}: ${command} error: ${results.stderr.toString()}`)
         }
         return results.stdout
     }
@@ -201,7 +234,7 @@ export default class FileCache {
                 child = child_process.spawn('unzip', ['-p', zip_path, file_path])
                 break
             default:
-                throw new Error('Other archive format not yet supported')
+                throw new Error(`Archive format ${type} not yet supported`)
         }
         return child.stdout
     }
@@ -214,21 +247,24 @@ export default class FileCache {
             case 'tar.gz':
             case 'tgz':
                 command = 'tar'
-                results = await exec(`tar -xOzf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
+                results = await exec(`tar -xOzf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`).catch(untar_error)
                 break
             case 'tar.z':
                 command = 'tar'
-                results = await exec(`tar -xOZf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
+                results = await exec(`tar -xOZf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`).catch(untar_error)
                 break
             case 'zip':
                 command = 'unzip'
-                results = await exec(`unzip -p ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`)
+                results = await exec(`unzip -p ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`).catch(unzip_error)
                 break
             default:
-                throw new Error('Other archive format not yet supported')
+                throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr.length) {
-            throw new Error(`${command}|file error: ${results.stderr.toString()}`)
+            console.log(`${file_path}: ${command} error: ${results.stderr.toString()}`)
+        }
+        if (results.failed) {
+            throw new Error(`${file_path}: ${command}|file error: ${results.stderr.toString()}`)
         }
         // Trim '/dev/stdin:'
         return results.stdout.trim().substring(12)
@@ -249,17 +285,20 @@ export default class FileCache {
             case 'tar.z':
             case 'tgz':
                 command = 'tar'
-                results = await execFile('tar', ['-tf', path])
+                results = await execFile('tar', ['-tf', path]).catch(untar_error)
                 break
             case 'zip':
                 command = 'unzip'
-                results = await execFile('unzip', ['-Z1', path])
+                results = await execFile('unzip', ['-Z1', path]).catch(unzip_error)
                 break
             default:
-                throw new Error('Other archive format not yet supported')
+                throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr) {
-            throw new Error(`${command} error: ${results.stderr}`)
+            console.log(`${path}: ${command} error: ${results.stderr.toString()}`)
+        }
+        if (results.failed) {
+            throw new Error(`${path}: ${command} error: ${results.stderr}`)
         }
         return results.stdout.trim().split('\n').filter(line => !line.endsWith('/')).sort()
     }
