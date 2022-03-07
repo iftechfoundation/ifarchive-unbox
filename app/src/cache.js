@@ -67,6 +67,9 @@ async function spawn_pipe_file_cb(command, args, callback) {
     unproc.stderr.on('data', data => { stderr += data; })
     unproc.on('close', code => {
         uncode = code
+	// Again, unzip code 1 is okay
+	if (command == 'unzip' && code == 1)
+	    uncode = 0
         fileproc.stdin.end()
     })
 
