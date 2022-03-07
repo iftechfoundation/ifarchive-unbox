@@ -54,18 +54,37 @@ function unzip_error(err) {
     return { stdout:err.stdout, stderr:err.stderr }
 }
 
+/* Callback-based function to spawn a process and pipe its output into
+   /usr/bin/file.
+
+   The callback is of the form callback(err, value). On success, 
+   value will be { stdout, stderr }. If something went wrong, the 
+   return object will be the first argument, and will look like
+   { failed:true, stdout, stderr }.
+
+   (This is slightly awkward, sorry. It's meant to be used with
+   util.promisify(); see below.)
+*/
 function spawn_pipe_file_cb(command, args, callback) {
     const unproc = child_process.spawn(command, args)
     const fileproc = child_process.spawn('file', ['-i', '-'])
 
+    // Accumulated output of the file command
     let stdout = ''
+    
+    // Accumulated error output
+    // (Both unzip and file send their stderr here, which means they could interleave weirdly, but in practice it will be one or the other.)
     let stderr = ''
+    
     // status code of the unzip/untar process
     let uncode = null
-    
+
+    // Send unzip stdout to file stdin
     unproc.stdout.on('data', data => { fileproc.stdin.write(data); })
+    // Add stderr to our accumulator.
     unproc.stderr.on('data', data => { stderr += data; })
     unproc.on('close', code => {
+        // Record the status code of the unzip process
         uncode = code
         // Again, unzip code 1 is okay
         if (command == 'unzip' && code == 1)
@@ -73,21 +92,24 @@ function spawn_pipe_file_cb(command, args, callback) {
         fileproc.stdin.end()
     })
 
+    // Ignore errors sending data to file stdin. (It likes to close its input, which results in an EPIPE error.)
     fileproc.stdin.on('error', data => {})
+    // Add stdout and stderr to our accumulators.
     fileproc.stdout.on('data', data => { stdout += data; })
     fileproc.stderr.on('data', data => { stderr += data; })
     
     fileproc.on('close', code => {
-        let result = { stdout:stdout, stderr:stderr }
+        // All done; call the callback. Fill in the first argument for failure, second arguent for success.
         if (uncode)
             callback({ failed:true, stdout:stdout, stderr:stderr }, undefined)
         else if (code)
             callback({ failed:true, stdout:stdout, stderr:stderr }, undefined)
         else
-            callback(undefined, result)
+            callback(undefined, { stdout:stdout, stderr:stderr })
     })
 }
 
+// An async, promise-based version of the above.
 const spawn_pipe_file = util.promisify(spawn_pipe_file_cb)
 
 class CacheEntry {
