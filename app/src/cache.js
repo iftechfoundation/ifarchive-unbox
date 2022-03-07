@@ -54,7 +54,7 @@ function unzip_error(err) {
     return { stdout:err.stdout, stderr:err.stderr }
 }
 
-async function spawn_pipe_file_cb(command, args, callback) {
+function spawn_pipe_file_cb(command, args, callback) {
     const unproc = child_process.spawn(command, args)
     const fileproc = child_process.spawn('file', ['-i', '-'])
 
