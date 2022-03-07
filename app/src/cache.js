@@ -54,6 +54,39 @@ function unzip_error(err) {
     return { stdout:err.stdout, stderr:err.stderr }
 }
 
+async function spawn_pipe_file_cb(command, args, callback) {
+    const unproc = spawn(command, args)
+    const fileproc = spawn('file', ['-i', '-'])
+
+    let stdout = ''
+    let stderr = ''
+    // status code of the unzip/untar process
+    let uncode = null
+    
+    unproc.stdout.on('data', data => { fileproc.stdin.write(data); })
+    unproc.stderr.on('data', data => { stderr += data; })
+    unproc.on('close', code => {
+        uncode = code
+        fileproc.stdin.end()
+    })
+
+    fileproc.stdin.on('error', data => {})
+    fileproc.stdout.on('data', data => { stdout += data; })
+    fileproc.stderr.on('data', data => { stderr += data; })
+    
+    fileproc.on('close', code => {
+        let result = { stdout:stdout, stderr:stderr }
+        if (uncode)
+            callback({ failed:true, stdout:stdout, stderr:stderr }, undefined)
+        else if (code)
+            callback({ failed:true, stdout:stdout, stderr:stderr }, undefined)
+        else
+            callback(undefined, result)
+    })
+}
+
+const spawn_pipe_file = util.promisify(spawn_pipe_file_cb)
+
 class CacheEntry {
     constructor (contents, date, size, type) {
         this.contents = contents
@@ -246,16 +279,16 @@ export default class FileCache {
         switch (type) {
             case 'tar.gz':
             case 'tgz':
-                command = 'tar'
-                results = await exec(`tar -xOzf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`).catch(untar_error)
+                command = 'tar|file'
+                results = await spawn_pipe_file('tar', ['-xOzf', zip_path, file_path]).catch(err => { return err; })
                 break
             case 'tar.z':
-                command = 'tar'
-                results = await exec(`tar -xOZf ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`).catch(untar_error)
+                command = 'tar|file'
+                results = await spawn_pipe_file('tar', ['-xOZf', zip_path, file_path]).catch(err => { return err; })
                 break
             case 'zip':
-                command = 'unzip'
-                results = await exec(`unzip -p ${zip_path} '${escape_shell_single_quoted(file_path)}' | file -i -`).catch(unzip_error)
+                command = 'unzip|file'
+                results = await spawn_pipe_file('unzip', ['-p', zip_path, file_path]).catch(err => { return err; })
                 break
             default:
                 throw new Error(`Archive format ${type} not yet supported`)
@@ -264,7 +297,7 @@ export default class FileCache {
             console.log(`${file_path}: ${command} error: ${results.stderr.toString()}`)
         }
         if (results.failed) {
-            throw new Error(`${file_path}: ${command}|file error: ${results.stderr.toString()}`)
+            throw new Error(`${file_path}: ${command} error: ${results.stderr.toString()}`)
         }
         // Trim '/dev/stdin:'
         return results.stdout.trim().substring(12)
