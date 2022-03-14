@@ -14,6 +14,7 @@ module.exports = {
         indent: ['error', 4, {MemberExpression: 'off', SwitchCase: 1}],
         'linebreak-style': ['error', 'unix'],
         'no-empty': ['off'],
+        'no-trailing-spaces': ['error'],
         'no-var': ['error'],
         'prefer-const': ['error', {destructuring: 'all'}],
         quotes: ['error', 'single', {allowTemplateLiterals: true, avoidEscape: true}],

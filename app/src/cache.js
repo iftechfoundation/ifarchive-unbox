@@ -16,6 +16,7 @@ When the ArchiveIndex sees an update, it will purge any outdated entries
 
 import child_process from 'child_process'
 import fs from 'fs/promises'
+import {chunk} from 'lodash-es'
 import path from 'path'
 import util from 'util'
 
@@ -56,8 +57,8 @@ function unzip_error(err) {
 /* Callback-based function to spawn a process and pipe its output into
    /usr/bin/file.
 
-   The callback is of the form callback(err, value). On success, 
-   value will be { stdout, stderr }. If something went wrong, the 
+   The callback is of the form callback(err, value). On success,
+   value will be { stdout, stderr }. If something went wrong, the
    return object will be the first argument, and will look like
    { failed:true, stdout, stderr }.
 
@@ -70,11 +71,11 @@ function spawn_pipe_file_cb(command, args, callback) {
 
     // Accumulated output of the file command
     let stdout = ''
-    
+
     // Accumulated error output
     // (Both unzip and file send their stderr here, which means they could interleave weirdly, but in practice it will be one or the other.)
     let stderr = ''
-    
+
     // status code of the unzip/untar process
     let uncode = null
 
@@ -96,7 +97,7 @@ function spawn_pipe_file_cb(command, args, callback) {
     // Add stdout and stderr to our accumulators.
     fileproc.stdout.on('data', data => { stdout += data })
     fileproc.stderr.on('data', data => { stderr += data })
-    
+
     fileproc.on('close', code => {
         // All done; call the callback. Fill in the first argument for failure, second arguent for success.
         if (uncode)
@@ -138,29 +139,32 @@ export default class FileCache {
         const files = await fs.readdir(this.cache_dir)
 
         // Add them into the cache
-        await Promise.all(files.map(async file => {
-            const file_path = path.join(this.cache_dir, file)
-            const parts = /(\w+)\.(.+)/.exec(file)
-            const hash = parts[1]
-            const stat = await fs.stat(file_path)
-            const date = +stat.mtime
-            const size = stat.size
-            const type = parts[2]
-            try {
-                const contents = await this.list_contents(file_path, type)
-                const entry = new CacheEntry(contents, date, size, type)
-                this.cache.set(hash, entry)
-                this.lru.push(hash)
-                this.size += size
-            }
-            catch (err) {
-                console.log(`Removing unreadable cache file ${file}: ${err}`)
+        // Process in chunks so that the server isn't overwhelmed
+        for (const batch of chunk(files, 4)) {
+            await Promise.all(batch.map(async file => {
+                const file_path = path.join(this.cache_dir, file)
+                const parts = /(\w+)\.(.+)/.exec(file)
+                const hash = parts[1]
+                const stat = await fs.stat(file_path)
+                const date = +stat.mtime
+                const size = stat.size
+                const type = parts[2]
                 try {
-                    await fs.rm(file_path)
+                    const contents = await this.list_contents(file_path, type)
+                    const entry = new CacheEntry(contents, date, size, type)
+                    this.cache.set(hash, entry)
+                    this.lru.push(hash)
+                    this.size += size
                 }
-                catch (_) {}
-            }
-        }))
+                catch (err) {
+                    console.log(`Removing unreadable cache file ${file}: ${err}`)
+                    try {
+                        await fs.rm(file_path)
+                    }
+                    catch (_) {}
+                }
+            }))
+        }
 
         console.log(`Cache initialized with ${this.lru.length} entries, ${this.size} bytes total`)
     }
