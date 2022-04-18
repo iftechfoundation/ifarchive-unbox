@@ -174,28 +174,36 @@ export default class FileCache {
         // Download the file with curl
         const url = `https://${this.options.archive_domain}/if-archive/${this.index.hash_to_path.get(hash)}`
         const type = SUPPORTED_FORMATS.exec(url)[1].toLowerCase()
-        const cache_path = this.file_path(hash, type)
-        const results = await execFile('curl', [encodeURI(url), '-o', cache_path, '-s', '-S', '-D', '-'])
+        const file_path = this.file_path(hash, type)
+        const results = await execFile('curl', [encodeURI(url), '-o', file_path, '-s', '-S', '-D', '-'])
         if (results.stderr) {
             throw new Error(`curl error: ${results.stderr}`)
         }
 
-        // Parse the date
-        const date_header = /last-modified:\s+\w+,\s+(\d+\s+\w+\s+\d+)/.exec(results.stdout)
-        if (!date_header) {
-            throw new Error('Could not parse last-modified header')
+        // Wrap our processing in a try-catch so that we can remove the file if it fails for any reason
+        let contents, date, size
+        try {
+            // Parse the date
+            const date_header = /last-modified:\s+\w+,\s+(\d+\s+\w+\s+\d+)/.exec(results.stdout)
+            if (!date_header) {
+                throw new Error('Could not parse last-modified header')
+            }
+            date = new Date(`${date_header[1]} UTC`)
+
+            // Reset the file's date
+            await fs.utimes(file_path, date, date)
+
+            // Get the file size
+            size = (await fs.stat(file_path)).size
+            this.size += size
+
+            // Get the files inside
+            contents = await this.list_contents(file_path, type)
         }
-        const date = new Date(`${date_header[1]} UTC`)
-
-        // Reset the file's date
-        await fs.utimes(cache_path, date, date)
-
-        // Get the file size
-        const size = (await fs.stat(cache_path)).size
-        this.size += size
-
-        // Get the files inside
-        const contents = await this.list_contents(cache_path, type)
+        catch (e) {
+            await fs.rm(file_path)
+            throw e
+        }
 
         // Update the cache, replacing the promise entry with a resolved entry object
         const entry = new CacheEntry(contents, +date, size, type)
