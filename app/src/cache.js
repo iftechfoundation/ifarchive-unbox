@@ -15,9 +15,12 @@ When the ArchiveIndex sees an update, it will purge any outdated entries
 */
 
 import child_process from 'child_process'
+import fetch from 'node-fetch'
 import fs from 'fs/promises'
+import fs_sync from 'fs'
 import {chunk} from 'lodash-es'
 import path from 'path'
+import { pipeline } from 'stream/promises'
 import util from 'util'
 
 import {SUPPORTED_FORMATS} from './common.js'
@@ -174,17 +177,18 @@ export default class FileCache {
         // Download the file with curl
         const url = `https://${this.options.archive_domain}/if-archive/${this.index.hash_to_path.get(hash)}`
         const type = SUPPORTED_FORMATS.exec(url)[1].toLowerCase()
-        const file_path = this.file_path(hash, type)
-        const results = await execFile('curl', [encodeURI(url), '-o', file_path, '-s', '-S', '-D', '-'])
-        if (results.stderr) {
-            throw new Error(`curl error: ${results.stderr}`)
+        const response = await fetch(url, {redirect: 'follow'})
+        if (!response.ok) {
+            throw new Error(`Error accessing ${url}: ${response.status}, ${response.statusText}`)
         }
+        const file_path = this.file_path(hash, type)
+        await pipeline(response.body, fs_sync.createWriteStream(file_path))
 
         // Wrap our processing in a try-catch so that we can remove the file if it fails for any reason
         let contents, date, size
         try {
             // Parse the date
-            const date_header = /last-modified:\s+\w+,\s+(\d+\s+\w+\s+\d+)/.exec(results.stdout)
+            const date_header = /\w+,\s+(\d+\s+\w+\s+\d+)/.exec(response.headers.get('last-modified'))
             if (!date_header) {
                 throw new Error('Could not parse last-modified header')
             }
