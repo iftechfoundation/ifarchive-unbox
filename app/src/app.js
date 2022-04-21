@@ -313,7 +313,14 @@ export default class UnboxApp {
             return
         }
 
-        // Type detection
+        await this.set_type(ctx, file_path, hash, details.type)
+
+        // Pipe the unzipped file to body
+        ctx.body = this.cache.get_file_stream(hash, file_path, details.type)
+    }
+
+    // Type detection
+    async set_type(ctx, file_path, hash, type) {
         // We define some file types for common extensions
         const ext = path.extname(file_path).substring(1)
         if (COMMON_FILE_TYPES[ext]) {
@@ -326,12 +333,21 @@ export default class UnboxApp {
 
         // For certain types, try to get a more accurate file type and encoding
         const mime_type = ctx.type
-        if (!mime_type || TYPES_TO_DETECT_BETTER.includes(mime_type)) {
-            const new_type = await this.cache.get_file_type(hash, file_path, details.type)
-            ctx.type = new_type
+        if (mime_type && !TYPES_TO_DETECT_BETTER.includes(mime_type)) {
+            return
         }
 
-        // Pipe the unzipped file to body
-        ctx.body = this.cache.get_file_stream(hash, file_path, details.type)
+        // For HTML, check for a <meta charset>
+        if (mime_type === 'text/html') {
+            const header = (await this.cache.get_file_buffer(hash, file_path, type, 1024)).toString('latin1')
+            const charset = /<meta\s+charset=['"]?([\w-]+)['"]?>/i.exec(header)
+            if (charset) {
+                ctx.type = `text/html; charset=${charset[1]}`
+                return
+            }
+        }
+
+        // Or try calling the file command
+        ctx.type = await this.cache.get_file_type(hash, file_path, type)
     }
 }

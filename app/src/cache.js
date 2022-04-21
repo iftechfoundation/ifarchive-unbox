@@ -174,7 +174,7 @@ export default class FileCache {
 
     // Download and set up a cache entry
     async download(hash) {
-        // Download the file with curl
+        // Download the file
         const url = `https://${this.options.archive_domain}/if-archive/${this.index.hash_to_path.get(hash)}`
         const type = SUPPORTED_FORMATS.exec(url)[1].toLowerCase()
         const response = await fetch(url, {redirect: 'follow'})
@@ -262,26 +262,32 @@ export default class FileCache {
     }
 
     // Extract a file from a zip, returning a buffer
-    async get_file(hash, file_path, type) {
+    async get_file_buffer(hash, file_path, type, max_buffer) {
         const zip_path = this.file_path(hash, type)
-        let command, results
+        let command, command_opts
         switch (type) {
             case 'tar.gz':
+            case 'tar.z':
             case 'tgz':
                 command = 'tar'
-                results = await execFile('tar', ['-xOzf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer}).catch(untar_error)
-                break
-            case 'tar.z':
-                command = 'tar'
-                results = await execFile('tar', ['-xOZf', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer}).catch(untar_error)
+                command_opts = type === 'tar.z' ? '-xOZf' : '-xOzf'
                 break
             case 'zip':
                 command = 'unzip'
-                results = await execFile('unzip', ['-p', zip_path, file_path], {encoding: 'buffer', maxBuffer: this.max_buffer}).catch(unzip_error)
+                command_opts = '-p'
                 break
             default:
                 throw new Error(`Archive format ${type} not yet supported`)
         }
+        const results = await execFile(command, [command_opts, zip_path, file_path], {
+            encoding: 'buffer',
+            maxBuffer: max_buffer ?? this.max_buffer,
+        }).catch(err => {
+            if (err.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' && max_buffer) {
+                return err
+            }
+            throw err
+        })
         if (results.stderr.length) {
             console.log(`${file_path}: ${command} error: ${results.stderr.toString()}`)
         }
@@ -294,50 +300,49 @@ export default class FileCache {
     // Get a file from a zip, returning a stream
     get_file_stream(hash, file_path, type) {
         const zip_path = this.file_path(hash, type)
-        let child
+        let command, command_opts
         switch (type) {
             case 'tar.gz':
-            case 'tgz':
-                child = child_process.spawn('tar', ['-xOzf', zip_path, file_path])
-                break
             case 'tar.z':
-                child = child_process.spawn('tar', ['-xOZf', zip_path, file_path])
+            case 'tgz':
+                command = 'tar'
+                command_opts = type === 'tar.z' ? '-xOZf' : '-xOzf'
                 break
             case 'zip':
-                child = child_process.spawn('unzip', ['-p', zip_path, file_path])
+                command = 'unzip'
+                command_opts = '-p'
                 break
             default:
                 throw new Error(`Archive format ${type} not yet supported`)
         }
+        const child = child_process.spawn(command, [command_opts, zip_path, file_path])
         return child.stdout
     }
 
     // Run file on an extracted file
     async get_file_type(hash, file_path, type) {
         const zip_path = this.file_path(hash, type)
-        let command, results
+        let command, command_opts
         switch (type) {
             case 'tar.gz':
-            case 'tgz':
-                command = 'tar|file'
-                results = await spawn_pipe_file('tar', ['-xOzf', zip_path, file_path]).catch(err => { return err })
-                break
             case 'tar.z':
-                command = 'tar|file'
-                results = await spawn_pipe_file('tar', ['-xOZf', zip_path, file_path]).catch(err => { return err })
+            case 'tgz':
+                command = 'tar'
+                command_opts = type === 'tar.z' ? '-xOZf' : '-xOzf'
                 break
             case 'zip':
-                command = 'unzip|file'
-                results = await spawn_pipe_file('unzip', ['-p', zip_path, file_path]).catch(err => { return err })
+                command = 'unzip'
+                command_opts = '-p'
                 break
             default:
                 throw new Error(`Archive format ${type} not yet supported`)
         }
+        const results = await spawn_pipe_file(command, [command_opts, zip_path, file_path]).catch(err => { return err })
         if (results.stderr.length) {
-            console.log(`${file_path}: ${command} error: ${results.stderr.toString()}`)
+            console.log(`${file_path}: ${command}|file error: ${results.stderr.toString()}`)
         }
         if (results.failed) {
-            throw new Error(`${file_path}: ${command} error: ${results.stderr.toString()}`)
+            throw new Error(`${file_path}: ${command}|file error: ${results.stderr.toString()}`)
         }
         // Trim '/dev/stdin:'
         return results.stdout.trim().substring(12)
