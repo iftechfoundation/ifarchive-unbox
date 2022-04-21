@@ -116,9 +116,10 @@ function spawn_pipe_file_cb(command, args, callback) {
 const spawn_pipe_file = util.promisify(spawn_pipe_file_cb)
 
 class CacheEntry {
-    constructor (contents, date, size, type) {
+    constructor (contents, date, normalised_paths, size, type) {
         this.contents = contents
         this.date = date
+        this.normalised_paths = normalised_paths
         this.size = size
         this.type = type
     }
@@ -153,8 +154,8 @@ export default class FileCache {
                 const size = stat.size
                 const type = parts[2]
                 try {
-                    const contents = await this.list_contents(file_path, type)
-                    const entry = new CacheEntry(contents, date, size, type)
+                    const [contents, normalised_paths] = await this.list_contents(file_path, type)
+                    const entry = new CacheEntry(contents, date, normalised_paths, size, type)
                     this.cache.set(hash, entry)
                     this.lru.push(hash)
                     this.size += size
@@ -185,7 +186,7 @@ export default class FileCache {
         await pipeline(response.body, fs_sync.createWriteStream(file_path))
 
         // Wrap our processing in a try-catch so that we can remove the file if it fails for any reason
-        let contents, date, size
+        let contents, date, normalised_paths, size
         try {
             // Parse the date
             const date_header = /\w+,\s+(\d+\s+\w+\s+\d+)/.exec(response.headers.get('last-modified'))
@@ -202,7 +203,7 @@ export default class FileCache {
             this.size += size
 
             // Get the files inside
-            contents = await this.list_contents(file_path, type)
+            ;[contents, normalised_paths] = await this.list_contents(file_path, type)
         }
         catch (e) {
             await fs.rm(file_path)
@@ -210,7 +211,7 @@ export default class FileCache {
         }
 
         // Update the cache, replacing the promise entry with a resolved entry object
-        const entry = new CacheEntry(contents, +date, size, type)
+        const entry = new CacheEntry(contents, +date, normalised_paths, size, type)
         this.cache.set(hash, entry)
 
         // Check the cache size
@@ -356,29 +357,47 @@ export default class FileCache {
     }
 
     // List the contents of a zip
-    async list_contents(path, type) {
+    async list_contents(zip_path, type) {
         let command, results
         switch (type) {
             case 'tar.gz':
             case 'tar.z':
             case 'tgz':
                 command = 'tar'
-                results = await execFile('tar', ['-tf', path]).catch(untar_error)
+                results = await execFile('tar', ['-tf', zip_path]).catch(untar_error)
                 break
             case 'zip':
                 command = 'unzip'
-                results = await execFile('unzip', ['-Z1', path]).catch(unzip_error)
+                results = await execFile('unzip', ['-Z1', zip_path]).catch(unzip_error)
                 break
             default:
                 throw new Error(`Archive format ${type} not yet supported`)
         }
         if (results.stderr) {
-            console.log(`${path}: ${command} error: ${results.stderr.toString()}`)
+            console.log(`${zip_path}: ${command} error: ${results.stderr.toString()}`)
         }
         if (results.failed) {
-            throw new Error(`${path}: ${command} error: ${results.stderr}`)
+            throw new Error(`${zip_path}: ${command} error: ${results.stderr}`)
         }
-        return results.stdout.trim().split('\n').filter(line => !line.endsWith('/')).sort()
+        const contents = results.stdout
+            .trim()
+            .split('\n')
+            .filter(line => !line.endsWith('/'))
+            .sort()
+
+        // Some archives need to have their file paths normalised, but store them so that we can extract the files later
+        for (const file_path of contents) {
+            if (file_path !== path.normalize(file_path)) {
+                const normalised_paths = {}
+                const new_contents = contents.map(file_path => {
+                    const normalised_path = path.normalize(file_path)
+                    normalised_paths[normalised_path] = file_path
+                    return normalised_path
+                })
+                return [new_contents, normalised_paths]
+            }
+        }
+        return [contents]
     }
 
     // Purge out of date files

@@ -288,16 +288,22 @@ export default class UnboxApp {
         }
 
         // Redirect folder views back to the index
-        const file_path = decodeURIComponent(path_parts[2])
+        let file_path = decodeURIComponent(path_parts[2])
         if (file_path === '' || file_path.endsWith('/')) {
             ctx.status = 301
             ctx.redirect(`/?url=https://ifarchive.org/if-archive/${zip_path}`)
             return
         }
 
+        // Check the requested file is in the zip
         const details = await this.cache.get(hash)
         if (details.contents.indexOf(file_path) < 0) {
             ctx.throw(404, `${zip_path} does not contain file ${file_path}`)
+        }
+
+        // If we have normalised file paths, restore the original path
+        if (details.normalised_paths) {
+            file_path = details.normalised_paths[file_path]
         }
 
         // Check for non-matching subdomain
