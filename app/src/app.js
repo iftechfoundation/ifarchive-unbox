@@ -3,7 +3,7 @@
 IF Archive Unboxing server
 ==========================
 
-Copyright (c) 2021 Dannii Willis
+Copyright (c) 2022 Dannii Willis
 MIT licenced
 https://github.com/iftechfoundation/ifarchive-unbox
 
@@ -14,6 +14,7 @@ import Koa from 'koa'
 
 import {
     COMMON_FILE_TYPES,
+    TYPES_THAT_ARENT_NO_TRANSFORM,
     TYPES_TO_DETECT_BETTER,
     UNSAFE_FILES,
     escape_regexp,
@@ -320,6 +321,12 @@ export default class UnboxApp {
         }
 
         await this.set_type(ctx, file_path, hash, details.type)
+
+        // Cloudflare compresses only a small list of MIME types, and they don't include any of our storyfile formats
+        // Consult the list to see if we need to set a Cache-control: no-transform header
+        if (!TYPES_THAT_ARENT_NO_TRANSFORM.includes(ctx.type)) {
+            ctx.set('Cache-Control', `max-age=${this.options['cache-control-age']}, no-transform`)
+        }
 
         // Pipe the unzipped file to body
         ctx.body = this.cache.get_file_stream(hash, file_path, details.type)
