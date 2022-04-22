@@ -34,19 +34,20 @@ For a complete description of Unbox's capabilities, see the [specification docum
 
 ## Running Unbox
 
-To run with [Docker][] Compose:
+To run with [Docker Compose][]:
 
 ```
-docker-compose up --build
+docker-compose up --build -d
 ```
 
 To adjust configuration options, create a file `data/options.json` containing a JSON map. (The `data` directory will be created the first time you start the service.) See the [options.json](./doc/options.json.md) documentation for configuration details.
 
 ## Development
 
-You can run Unbox on your local machine. You must first install [Docker][].
+You can run Unbox on your local machine. You must first install [Docker][] and [Docker Compose][].
 
 [Docker]: https://docs.docker.com/get-docker/
+[Docker Compose]: https://docs.docker.com/compose/install/
 
 The service uses ports 80 (for the outward-facing nginx server) and 8080 (for the internal ifarchive-unbox server). If you are already running a web service on port 80, you will have to reconfigure Unbox to use a different port. To do this, replace "80" with "8000" in `docker-compose.yml` and `nginx/nginx.sh`.
 
@@ -57,6 +58,16 @@ docker-compose down
 docker-compose up --build
 ```
 
-The server is built on the [Koa][] web framework.
+Then once you are satisfied, run the containers in the background with `-d`:
 
-[Koa]: https://koajs.com/
+```
+docker-compose down
+docker-compose up --build -d
+```
+
+If you need to empty the cache, follow these steps:
+
+1. `docker-compose down`
+2. `rm -rf data/cache data/nginx-cache`
+3. Clear the Cloudflare cache
+4. `docker-compose up --build -d`
