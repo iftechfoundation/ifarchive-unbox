@@ -70,6 +70,9 @@ EOF
 
 if [ -n "$DOMAIN" ] && [ "$SUBDOMAINS" = "true" ]; then
 
+CACHE_DIR="$DATA_DIR/nginx-cache"
+mkdir -p $CACHE_DIR
+
 if [ "$SUPPORT_BYPASS" = "true" ]; then
     BYPASS="proxy_cache_bypass \$http_pragma;"
 fi
@@ -77,7 +80,7 @@ fi
 # Subdomain server
 cat >> $CONF_FILE <<EOF
 
-proxy_cache_path ${DATA_DIR}/nginx-cache keys_zone=cache:${KEYS_SIZE}m levels=1:2 max_size=${MAX_SIZE}m;
+proxy_cache_path $CACHE_DIR keys_zone=cache:${KEYS_SIZE}m levels=1:2 max_size=${MAX_SIZE}m;
 
 server {
     $LISTEN
@@ -85,6 +88,8 @@ server {
     $SSL
     $GZIP
     proxy_cache cache;
+    proxy_cache_valid 301 365d;
+    proxy_cache_valid any 1d;
     $BYPASS
 
     location / {
