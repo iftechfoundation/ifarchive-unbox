@@ -335,7 +335,7 @@ export default class UnboxApp {
     // Type detection
     async set_type(ctx, file_path, hash, type) {
         // We define some file types for common extensions
-        const ext = path.extname(file_path).substring(1)
+        const ext = path.extname(file_path).substring(1).toLowerCase()
         if (COMMON_FILE_TYPES[ext]) {
             ctx.set('Content-Type', COMMON_FILE_TYPES[ext])
         }

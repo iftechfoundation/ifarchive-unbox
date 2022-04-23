@@ -11,20 +11,29 @@ https://github.com/iftechfoundation/ifarchive-unbox
 
 // Maps familiar file suffixes to MIME types.
 export const COMMON_FILE_TYPES = {
+    a3c: 'application/x-alan',
+    acd: 'application/x-alan',
+    agx: 'application/x-agt',
     blb: 'application/x-blorb',
     blorb: 'application/x-blorb',
     css: 'text/css',
+    d$$: 'application/x-agt',
     gam: 'application/x-tads',
     gblorb: 'application/x-blorb;profile="glulx"',
     gif: 'image/gif',
     glb: 'application/x-blorb;profile="glulx"',
+    gz: 'application/gzip',
+    hex: 'application/x-hugo',
     htm: 'text/html',
     html: 'text/html',
     jpeg: 'image/jpeg',
     jpg: 'image/jpeg',
     js: 'application/javascript',
+    mp3: 'audio/mpeg',
+    ogg: 'audio/ogg',
     png: 'image/png',
     t3: 'application/x-t3vm-image',
+    taf: 'application/x-adrift',
     txt: 'text/plain',
     ulx: 'application/x-glulx',
     zblorb: 'application/x-blorb;profile="zcode"',
@@ -35,6 +44,7 @@ export const COMMON_FILE_TYPES = {
     z6: 'application/x-zmachine',
     z7: 'application/x-zmachine',
     z8: 'application/x-zmachine',
+    zip: 'application/zip',
 }
 
 // Regex: what package formats do we handle?
