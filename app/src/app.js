@@ -369,5 +369,10 @@ export default class UnboxApp {
 
         // Or try calling the file command
         ctx.type = await this.cache.get_file_type(hash, file_path, type)
+
+        // The file command may decide HTML fragments aren't HTML, so force them back to being HTML
+        if (mime_type === 'text/html') {
+            ctx.set('Content-Type', `text/html;${ctx.response.get('Content-Type').split(';')[1]}`)
+        }
     }
 }
