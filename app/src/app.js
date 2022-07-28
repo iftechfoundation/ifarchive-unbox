@@ -299,6 +299,13 @@ export default class UnboxApp {
         // Check the requested file is in the zip
         const details = await this.cache.get(hash)
         if (details.contents.indexOf(file_path) < 0) {
+            // Support HTML files designed on case-insensitive file systems by looking for files with the same name ignoring case
+            const case_insensitive_matches = details.contents.filter(file => file_path.localeCompare(file, undefined, {sensitivity: 'accent'}) === 0)
+            if (case_insensitive_matches.length === 1) {
+                ctx.status = 301
+                ctx.redirect(`/${hash}/${case_insensitive_matches[0]}`)
+                return
+            }
             ctx.throw(404, `${zip_path} does not contain file ${file_path}`)
         }
 
