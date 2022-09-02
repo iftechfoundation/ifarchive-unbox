@@ -360,7 +360,7 @@ export default class UnboxApp {
         // For HTML, check for a <meta charset>
         if (mime_type === 'text/html') {
             const header = (await this.cache.get_file_buffer(hash, file_path, type, 1024)).toString('latin1')
-            const charset = /<meta\s+charset=['"]?([\w-]+)['"]?>/i.exec(header)
+            const charset = /<meta\s+charset=['"]?([\w-]+)['"]?\s*\/?>/i.exec(header)
             if (charset) {
                 ctx.type = `text/html; charset=${charset[1]}`
                 return
