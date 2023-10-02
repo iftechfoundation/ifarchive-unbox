@@ -124,11 +124,18 @@ export default class UnboxApp {
         // Solve CORS issues
         ctx.set('Access-Control-Allow-Origin', '*')
 
-        // Cache this please
-        ctx.set('Cache-Control', `max-age=${this.options['cache-control-age']}`)
-
         // Front page
         if (request_path === '/') {
+            if (query.refresh_index) {
+                ctx.set('Cache-Control', `no-store`)
+                await this.index.check_for_update()
+                ctx.body = 'Refreshed Index ' + this.index.etag
+                return
+            }
+
+            // Cache this please
+            ctx.set('Cache-Control', `max-age=${this.options['cache-control-age']}`)
+
             if (!query.url) {
                 ctx.body = templates.wrapper({
                     content: templates.form(),
