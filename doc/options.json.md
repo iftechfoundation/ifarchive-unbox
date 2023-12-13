@@ -12,6 +12,7 @@ Here are all the options you can set in data/options.json
         "max_size": 1000000000
     },
     "cache-control-age": 604800,
+    "cache-control-age-error": 86400,
     "certbot": {
         "email": "user@domain.com",
         "renew_time": 720,
@@ -21,7 +22,7 @@ Here are all the options you can set in data/options.json
     "https": false,
     "index": {
         "index_url": "https://ifarchive.org/indexes/Master-Index.xml",
-        "recheck_period": 360
+        "recheck_period": 5
     },
     "nginx": {
         "cache" :{
@@ -43,6 +44,7 @@ Here are all the options you can set in data/options.json
   - max_entries: (int) number of zip files to cache
   - max_size: (int bytes) amount of disk to use for the cache
 - cache-control-age: (int seconds) time to set for the Cache-Control header
+- cache-control-age-error: (int seconds) time to set for the Cache-Control header for error pages
 - certbot: options for certbot
   - email: (str) email address for certbot notifications (required for HTTPS)
   - rewew_time: (int minutes) period to rewew certificate

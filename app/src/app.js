@@ -42,6 +42,9 @@ export default class UnboxApp {
                 await next()
             }
             catch (err) {
+                // Only cache errors for a day (by default)
+                ctx.set('Cache-Control', `max-age=${this.options['cache-control-age-error']}`)
+
                 ctx.status = err.statusCode || err.status || 500
                 if ('json' in ctx.query) {
                     ctx.body = {

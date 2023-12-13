@@ -65,7 +65,6 @@ export default class ArchiveIndex {
         }
         if (this.etag === new_etag) {
             if (this.hash_to_path) {
-                console.log('ArchiveIndex: Master-Index.xml is unchanged')
                 return
             }
             // Parse the stored data if we didn't update it just now

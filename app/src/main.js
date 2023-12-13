@@ -25,10 +25,11 @@ const default_options = {
         max_size: 1000000000, // 1 GB
     },
     'cache-control-age': 604800, // 1 week
+    'cache-control-age-error': 86400, // 1 day
     //domain: 'unbox.ifarchive.org', // App domain
     index: {
         index_url: 'https://ifarchive.org/indexes/Master-Index.xml',
-        recheck_period: 360, // Every 6 hours
+        recheck_period: 5, // Every 5 minutes
     },
     serve_proxy_pac: false, // Whether to serve the proxy.pac file
     subdomains: false, // Whether to use subdomains
