@@ -3,7 +3,7 @@
 Process the IF Archive's index
 ==============================
 
-Copyright (c) 2021 Dannii Willis
+Copyright (c) 2023 Dannii Willis
 MIT licenced
 https://github.com/iftechfoundation/ifarchive-unbox
 
@@ -22,7 +22,7 @@ import {SUPPORTED_FORMATS} from './common.js'
 import fetch from 'node-fetch'
 import flow from 'xml-flow'
 
-const JSON_VERSION = 6
+const JSON_VERSION = 7
 
 export default class ArchiveIndex {
     constructor(data_dir, options, cache) {
@@ -127,7 +127,7 @@ export default class ArchiveIndex {
                     // 48 bits of the sha512 hash of the path
                     let hash = parseInt(crypto.createHash('sha512').update(path).digest('hex').substring(0, 12), 16)
                     hash = hash.toString(36).padStart(10, '0')
-                    const date = +(new Date(`${file.date} UTC`))
+                    const date = parseInt(file.rawdate, 10) * 1000
                     files.push([hash, path, date])
 
                     if (file.metadata) {

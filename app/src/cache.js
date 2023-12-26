@@ -3,7 +3,7 @@
 File cache
 ==========
 
-Copyright (c) 2021 Dannii Willis
+Copyright (c) 2023 Dannii Willis
 MIT licenced
 https://github.com/iftechfoundation/ifarchive-unbox
 
@@ -188,12 +188,7 @@ export default class FileCache {
         // Wrap our processing in a try-catch so that we can remove the file if it fails for any reason
         let contents, date, normalised_paths, size
         try {
-            // Parse the date
-            const date_header = /\w+,\s+(\d+\s+\w+\s+\d+)/.exec(response.headers.get('last-modified'))
-            if (!date_header) {
-                throw new Error('Could not parse last-modified header')
-            }
-            date = new Date(`${date_header[1]} UTC`)
+            date = new Date(response.headers.get('last-modified'))
 
             // Reset the file's date
             await fs.utimes(file_path, date, date)
