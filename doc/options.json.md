@@ -22,6 +22,7 @@ Here are all the options you can set in data/options.json
     "https": false,
     "index": {
         "index_url": "https://ifarchive.org/indexes/Master-Index.xml",
+        "recheck_key": "secretkey",
         "recheck_period": 5
     },
     "nginx": {
@@ -53,6 +54,7 @@ Here are all the options you can set in data/options.json
 - https: (bool) whether to enable HTTPS
 - index: options for the IF Archive index processor
   - index_url: (str) URL to Master-Index.xml
+  - recheck_key: (str) a secret key used when forcing the index to be rechecked
   - recheck_period: (int minutes) period to check if Master-Index.xml has changed
 - nginx: nginx options
   - cache: nginx cache options

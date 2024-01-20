@@ -3,7 +3,7 @@
 IF Archive Unboxing server
 ==========================
 
-Copyright (c) 2022 Dannii Willis
+Copyright (c) 2024 Dannii Willis
 MIT licenced
 https://github.com/iftechfoundation/ifarchive-unbox
 
@@ -11,6 +11,7 @@ https://github.com/iftechfoundation/ifarchive-unbox
 
 import path from 'path'
 import Koa from 'koa'
+import {koaBody} from 'koa-body'
 
 import {
     COMMON_FILE_TYPES,
@@ -111,6 +112,8 @@ export default class UnboxApp {
             })
         }
 
+        this.app.use(koaBody())
+
         // And the main handler
         this.app.use(this.handler.bind(this))
     }
@@ -132,6 +135,22 @@ export default class UnboxApp {
 
         // Front page
         if (request_path === '/') {
+            // Allow the IF Archive admins to direct us to update the index as soon as it changes
+            if ('recheck_index' in query) {
+                if (ctx.request.method !== 'POST') {
+                    ctx.throw(405, 'Rechecking the index must use POST')
+                }
+
+                const recheck_key = ctx.request.body.key
+                if (recheck_key !== this.options.index.recheck_key) {
+                    ctx.throw(401, 'Secret key does not match')
+                }
+
+                this.index.check_for_update()
+                ctx.body = 'Rechecking the IF Archive index...'
+                return
+            }
+
             if (!query.url) {
                 ctx.body = templates.wrapper({
                     content: templates.form(),
