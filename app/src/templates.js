@@ -15,8 +15,10 @@ import {escape} from 'lodash-es'
 
 import {UNSAFE_FILES} from './common.js'
 
-function percent(path) {
-    return escape(path).replaceAll('?', '%3F')
+function escape_url_segment(path) {
+    return escape(path)
+        .replaceAll('#', '%23')
+        .replaceAll('?', '%3F')
 }
 
 function slashbreak(path) {
@@ -70,7 +72,7 @@ export function form() {
 
 export function list(opts) {
     function make_url(file) {
-        return `${opts.subdomains && UNSAFE_FILES.test(file) ? `//${opts.hash}.${opts.domain}` : ''}/${opts.hash}/${percent(file)}`
+        return `${opts.subdomains && UNSAFE_FILES.test(file) ? `//${opts.hash}.${opts.domain}` : ''}/${opts.hash}/${escape_url_segment(file)}`
     }
 
     const listcontents = opts.files.map(file => `<li><a href="${make_url(file)}">${slashbreak(escape(file))}</a></li>`).join('\n')
