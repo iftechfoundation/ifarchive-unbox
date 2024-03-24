@@ -199,8 +199,14 @@ export default class UnboxApp {
             const details = await this.cache.get(hash)
 
             // Open (redirect) to a specific file
-            if (query.open) {
-                const open_regexp = new RegExp(`(^|/)${escape_regexp(query.open)}$`, 'i')
+            const filename = query.open
+            if (filename) {
+                if (details.contents.includes(filename)) {
+                    ctx.status = 301
+                    ctx.redirect(`/${hash}/${filename}`)
+                    return
+                }
+                const open_regexp = new RegExp(`(^|/)${escape_regexp(filename)}$`, 'i')
                 const results = details.contents.filter(file => open_regexp.test(file))
                 if (results.length > 1) {
                     ctx.throw(400, 'Filename is not unique')
@@ -212,7 +218,7 @@ export default class UnboxApp {
                 }
                 // No matching file, but if enabled we can look for another file of the same type
                 if (this.options.open_file_of_same_type) {
-                    const same_type_regexp = new RegExp(`\\.${path.extname(query.open).substring(1)}$`, 'i')
+                    const same_type_regexp = new RegExp(`\\.${path.extname(filename).substring(1)}$`, 'i')
                     const results = details.contents.filter(file => same_type_regexp.test(file))
                     if (results.length === 1) {
                         ctx.status = 301
@@ -232,8 +238,9 @@ export default class UnboxApp {
             }
 
             // Search for files
-            if (query.search) {
-                const search_regexp = new RegExp(escape_regexp(query.search), 'i')
+            const search = query.search
+            if (search) {
+                const search_regexp = new RegExp(escape_regexp(search), 'i')
                 const results = details.contents.filter(file => search_regexp.test(file))
                 if ('json' in query) {
                     ctx.body = {
@@ -243,13 +250,13 @@ export default class UnboxApp {
                 }
                 else {
                     ctx.body = templates.wrapper({
-                        canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}&find=${query.search}`,
+                        canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}&find=${search}`,
                         content: templates.list({
                             alllink: true,
                             domain: this.options.domain,
                             files: results,
                             hash: hash,
-                            label: `Files matching ${query.search} in`,
+                            label: `Files matching ${search} in`,
                             path: file_path,
                             subdomains: this.options.subdomains,
                         }),
@@ -271,13 +278,26 @@ export default class UnboxApp {
             // Look for one index.html file (or one .html file in general) to show with a Start button
             const htmlfiles = details.contents.filter(file => /\.html?$/i.test(file))
             let starthtml
-            if (htmlfiles.length === 1) {
-                starthtml = htmlfiles[0]
-            }
             if (htmlfiles.length) {
-                const indexfiles = htmlfiles.filter(file => /index\.html?$/i.test(file))
-                if (indexfiles.length === 1) {
-                    starthtml = indexfiles[0]
+                // Only one HTML file
+                if (htmlfiles.length === 1) {
+                    starthtml = htmlfiles[0]
+                }
+                else {
+                    // Look for index.html in root position
+                    if (htmlfiles.includes('index.html')) {
+                        starthtml = 'index.html'
+                    }
+                    else if (htmlfiles.includes('index.htm')) {
+                        starthtml = 'index.htm'
+                    }
+                    else {
+                        // Or else an index.html file in any subfolder
+                        const indexfiles = htmlfiles.filter(file => /index\.html?$/i.test(file))
+                        if (indexfiles.length === 1) {
+                            starthtml = indexfiles[0]
+                        }
+                    }
                 }
             }
 
