@@ -3,7 +3,7 @@
 IF Archive Unboxing server - front page
 =======================================
 
-Copyright (c) 2021 Dannii Willis
+Copyright (c) 2024 Dannii Willis
 MIT licenced
 https://github.com/iftechfoundation/ifarchive-unbox
 
@@ -16,9 +16,8 @@ import {escape} from 'lodash-es'
 import {UNSAFE_FILES} from './common.js'
 
 function escape_url_segment(path) {
-    return escape(path)
-        .replaceAll('#', '%23')
-        .replaceAll('?', '%3F')
+    const replacements = path.replaceAll('#', '%23').replaceAll('?', '%3F')
+    return escape(replacements)
 }
 
 function slashbreak(path) {
