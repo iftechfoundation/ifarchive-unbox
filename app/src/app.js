@@ -77,13 +77,6 @@ export default class UnboxApp {
                     ctx.throw(400, 'Too many subdomains')
                 }
 
-                // Safe file on non-subdomain
-                if (subdomain_count === 1 && !UNSAFE_FILES.test(path)) {
-                    ctx.status = 301
-                    ctx.redirect(`//${domain}${path}`)
-                    return
-                }
-
                 // Unsafe file on main domain
                 if (subdomain_count === 0 && UNSAFE_FILES.test(path)) {
                     const path_parts = PATH_PARTS.exec(path)
