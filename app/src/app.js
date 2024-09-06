@@ -65,39 +65,6 @@ export default class UnboxApp {
             }
         })
 
-        // Redirect to subdomains
-        if (options.subdomains) {
-            this.app.subdomainOffset = domain.split('.').length
-            this.app.use(async (ctx, next) => {
-                const path = ctx.path
-                const subdomain_count = ctx.subdomains.length
-
-                // Too many subdomains
-                if (subdomain_count > 1) {
-                    ctx.throw(400, 'Too many subdomains')
-                }
-
-                // Safe file on non-subdomain
-                if (subdomain_count === 1 && !UNSAFE_FILES.test(path)) {
-                    ctx.status = 301
-                    ctx.redirect(`//${domain}${path}`)
-                    return
-                }
-
-                // Unsafe file on main domain
-                if (subdomain_count === 0 && UNSAFE_FILES.test(path)) {
-                    const path_parts = PATH_PARTS.exec(path)
-                    if (path_parts) {
-                        ctx.status = 301
-                        ctx.redirect(`//${path_parts[1]}.${domain}${path}`)
-                        return
-                    }
-                }
-
-                await next()
-            })
-        }
-
         // Serve a proxy.pac file
         if (domain && options.serve_proxy_pac) {
             this.app.use(async (ctx, next) => {
@@ -130,8 +97,7 @@ export default class UnboxApp {
         // Solve CORS issues
         ctx.set('Access-Control-Allow-Origin', '*')
 
-        // Cache this please
-        ctx.set('Cache-Control', `max-age=${this.options['cache-control-age']}`)
+        ctx.set('Cache-Control', `max-age=0`)
 
         // Front page
         if (request_path === '/') {
@@ -356,9 +322,37 @@ export default class UnboxApp {
             file_path = details.normalised_paths[file_path]
         }
 
-        // Check for non-matching subdomain
-        if (this.options.subdomains && UNSAFE_FILES.test(file_path) && !ctx.hostname.startsWith(hash)) {
-            ctx.throw(400, `Incorrect subdomain`)
+        // Redirect to subdomains
+        if (this.options.subdomains) {
+            const path = ctx.path
+            const subdomain_count = ctx.host.split('.').length - this.options.domain.split('.').length
+
+            // Too many subdomains
+            if (subdomain_count > 1) {
+                ctx.throw(400, 'Too many subdomains')
+            }
+
+            // Safe file on non-subdomain
+            if (subdomain_count === 1 && !UNSAFE_FILES.test(path)) {
+                ctx.status = 302
+                ctx.redirect(`//${this.options.domain}${path}?lastmod=${details.date}`)
+                return
+            }
+
+            // Unsafe file on main domain
+            if (subdomain_count === 0 && UNSAFE_FILES.test(path)) {
+                const path_parts = PATH_PARTS.exec(path)
+                if (path_parts) {
+                    ctx.status = 301
+                    ctx.redirect(`//${path_parts[1]}.${this.options.domain}${path}`)
+                    return
+                }
+            }
+        }
+
+        if ('lastmod' in query) {
+            // Cache this please
+            ctx.set('Cache-Control', `max-age=${this.options['cache-control-age']}`)
         }
 
         // Send and check the Last-Modified/If-Modified-Since headers
