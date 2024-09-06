@@ -12,7 +12,7 @@ Here are all the options you can set in data/options.json
         "max_size": 1000000000
     },
     "cache-control-age": 604800,
-    "cache-control-age-error": 86400,
+    "cache-control-age-error": 0,
     "certbot": {
         "email": "user@domain.com",
         "renew_time": 720,

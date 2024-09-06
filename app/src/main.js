@@ -25,7 +25,7 @@ const default_options = {
         max_size: 1000000000, // 1 GB
     },
     'cache-control-age': 604800, // 1 week
-    'cache-control-age-error': 86400, // 1 day
+    'cache-control-age-error': 0,
     //domain: 'unbox.ifarchive.org', // App domain
     index: {
         index_url: 'https://ifarchive.org/indexes/Master-Index.xml',
