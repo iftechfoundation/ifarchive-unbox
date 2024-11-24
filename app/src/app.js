@@ -25,6 +25,13 @@ import * as templates from './templates.js'
 const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
 const VALID_ORIGINS = /^(https?:\/\/(mirror\.|www\.)?ifarchive\.org)?\//
 
+// https://github.com/iftechfoundation/ifarchive-unbox/issues/61
+// When adding subdomains to this list, we need to manually add them in the Cloudflare admin tool
+const ALLOWED_SUBDOMAINS = new Set([
+    // /if-archive/games/competition2024/Games/Quest_for_the_Teacup_of_Minor_Sentimental_Value.zip
+    '2k788xeots',
+])
+
 export default class UnboxApp {
     constructor(options, cache, index) {
         this.cache = cache
@@ -64,6 +71,39 @@ export default class UnboxApp {
                 }
             }
         })
+
+        // Redirect to subdomains
+        if (options.subdomains) {
+            this.app.subdomainOffset = domain.split('.').length
+            this.app.use(async (ctx, next) => {
+                const path = ctx.path
+                const subdomain_count = ctx.subdomains.length
+
+                // Too many subdomains
+                if (subdomain_count > 1) {
+                    ctx.throw(400, 'Too many subdomains')
+                }
+
+                // Safe file on non-subdomain
+                if (subdomain_count === 1 && !UNSAFE_FILES.test(path) && !ALLOWED_SUBDOMAINS.has(ctx.subdomains[0])) {
+                    ctx.status = 301
+                    ctx.redirect(`//${domain}${path}`)
+                    return
+                }
+
+                // Unsafe file on main domain
+                if (subdomain_count === 0 && UNSAFE_FILES.test(path)) {
+                    const path_parts = PATH_PARTS.exec(path)
+                    if (path_parts) {
+                        ctx.status = 301
+                        ctx.redirect(`//${path_parts[1]}.${domain}${path}`)
+                        return
+                    }
+                }
+
+                await next()
+            })
+        }
 
         // Serve a proxy.pac file
         if (domain && options.serve_proxy_pac) {
@@ -333,7 +373,7 @@ export default class UnboxApp {
             }
 
             // Safe file on non-subdomain
-            if (subdomain_count === 1 && !UNSAFE_FILES.test(path)) {
+            if (subdomain_count === 1 && !UNSAFE_FILES.test(path) && !ALLOWED_SUBDOMAINS.has(ctx.subdomains[0])) {
                 ctx.status = 302
                 ctx.redirect(`//${this.options.domain}${path}?lastmod=${details.date}`)
                 return
