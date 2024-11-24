@@ -72,6 +72,39 @@ export default class UnboxApp {
             }
         })
 
+        // Redirect to subdomains
+        if (options.subdomains) {
+            this.app.subdomainOffset = domain.split('.').length
+            this.app.use(async (ctx, next) => {
+                const path = ctx.path
+                const subdomain_count = ctx.subdomains.length
+
+                // Too many subdomains
+                if (subdomain_count > 1) {
+                    ctx.throw(400, 'Too many subdomains')
+                }
+
+                // Safe file on non-subdomain
+                if (subdomain_count === 1 && !UNSAFE_FILES.test(path) && !ALLOWED_SUBDOMAINS.has(ctx.subdomains[0])) {
+                    ctx.status = 301
+                    ctx.redirect(`//${domain}${path}`)
+                    return
+                }
+
+                // Unsafe file on main domain
+                if (subdomain_count === 0 && UNSAFE_FILES.test(path)) {
+                    const path_parts = PATH_PARTS.exec(path)
+                    if (path_parts) {
+                        ctx.status = 301
+                        ctx.redirect(`//${path_parts[1]}.${domain}${path}`)
+                        return
+                    }
+                }
+
+                await next()
+            })
+        }
+
         // Serve a proxy.pac file
         if (domain && options.serve_proxy_pac) {
             this.app.use(async (ctx, next) => {
