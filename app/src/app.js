@@ -25,6 +25,13 @@ import * as templates from './templates.js'
 const PATH_PARTS = /^\/([0-9a-zA-Z]+)\/?(.*)$/
 const VALID_ORIGINS = /^(https?:\/\/(mirror\.|www\.)?ifarchive\.org)?\//
 
+// https://github.com/iftechfoundation/ifarchive-unbox/issues/61
+// When adding subdomains to this list, we need to manually add them in the Cloudflare admin tool
+const ALLOWED_SUBDOMAINS = new Set([
+    // /if-archive/games/competition2024/Games/Quest_for_the_Teacup_of_Minor_Sentimental_Value.zip
+    '2k788xeots',
+])
+
 export default class UnboxApp {
     constructor(options, cache, index) {
         this.cache = cache
@@ -78,7 +85,7 @@ export default class UnboxApp {
                 }
 
                 // Safe file on non-subdomain
-                if (subdomain_count === 1 && !UNSAFE_FILES.test(path)) {
+                if (subdomain_count === 1 && !UNSAFE_FILES.test(path) && !ALLOWED_SUBDOMAINS.has(ctx.subdomains[0])) {
                     ctx.status = 301
                     ctx.redirect(`//${domain}${path}`)
                     return
