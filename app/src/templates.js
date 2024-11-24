@@ -33,8 +33,9 @@ export function wrapper(opts) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://ifarchive.org/misc/ifarchive.css">
     ${opts.canonical ? `<link rel="canonical" href="${opts.canonical}">` : ''}
+    <script src="https://ifarchive.org/misc/darkmode.js" type="text/javascript"></script>
 </head>
-<body>
+<body class="SysMode">
     <div id="unboxpage" class="Page">
         <div class="Header">
             <h1><a href="/">IF Archive Unboxing Service</a></h1>
@@ -44,7 +45,10 @@ export function wrapper(opts) {
 
         <div class="Footer">
             <p>The <a href="https://ifarchive.org/">IF Archive</a> is a public service of the <a href="https://iftechfoundation.org/">Interactive Fiction Technology Foundation</a>.</p>
-            <p><a href="https://github.com/iftechfoundation/ifarchive-unbox">About the Unboxing Service</a></p>
+            <p><a href="https://github.com/iftechfoundation/ifarchive-unbox">About the Unboxing Service</a>
+                <span id="jsdash" class="Hide">-</span>
+                <button id="toggletheme" class="FootWidget Hide">&#x25D0; Theme</button>
+            </p>
         </div>
     </div>
 </body>
