@@ -39,6 +39,7 @@ export default class UnboxApp {
         this.options = options
 
         const domain = options.domain
+        this.subdomains_count = this.options.domain.split('.').length
 
         this.app = new Koa()
 
@@ -332,7 +333,8 @@ export default class UnboxApp {
         // Redirect to subdomains
         if (this.options.subdomains) {
             const path = ctx.path
-            const subdomain_count = ctx.host.split('.').length - this.options.domain.split('.').length
+            const subdomains = ctx.host.split('.')
+            const subdomain_count = subdomains.length - this.subdomains_count
 
             // Too many subdomains
             if (subdomain_count > 1) {
@@ -340,7 +342,7 @@ export default class UnboxApp {
             }
 
             // Safe file on non-subdomain
-            if (subdomain_count === 1 && !UNSAFE_FILES.test(path) && !ALLOWED_SUBDOMAINS.has(ctx.subdomains[0])) {
+            if (subdomain_count === 1 && !UNSAFE_FILES.test(path) && !ALLOWED_SUBDOMAINS.has(subdomains[0])) {
                 ctx.status = 302
                 ctx.redirect(`//${this.options.domain}${path}?lastmod=${details.date}`)
                 return
