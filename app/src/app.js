@@ -89,6 +89,14 @@ export default class UnboxApp {
 
         this.app.use(koaBody())
 
+        this.app.use(async (ctx, next) => {
+            try {
+                await next()
+            } finally {
+                console.log(`${ctx.method} ${ctx.url} ${ctx.status} "${ctx.headers['if-modified-since']}"`)
+            }
+        })
+
         // And the main handler
         this.app.use(this.handler.bind(this))
     }
