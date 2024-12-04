@@ -93,7 +93,7 @@ export default class UnboxApp {
             try {
                 await next()
             } finally {
-                console.log(`${ctx.method} ${ctx.url} ${ctx.status} "${ctx.headers['if-modified-since']}"`)
+                console.log(`${ctx.method} ${ctx.url} ${ctx.status} "${ctx.headers['if-modified-since']}" "${ctx.headers['cache-control']}"`)
             }
         })
 
@@ -114,6 +114,17 @@ export default class UnboxApp {
         ctx.set('Access-Control-Allow-Origin', '*')
 
         ctx.set('Cache-Control', `max-age=1`)
+
+        const ctxFresh = () => {
+            if (this.options.nginx?.cache?.support_bypass) {
+                // ctx fresh uses https://github.com/jshttp/fresh/blob/v0.5.2/index.js#L43-L49
+                // which always honors `Cache-Control: no-cache` in the request header
+                return ctx.fresh
+            } else {
+                const modifiedSince = ctx.request.headers['if-modified-since']
+                return !!modifiedSince && modifiedSince === ctx.response.headers['last-modified']
+            }
+        }
 
         // Front page
         if (request_path === '/') {
@@ -214,7 +225,7 @@ export default class UnboxApp {
             // Send and check the Last-Modified/If-Modified-Since headers
             ctx.status = 200
             ctx.lastModified = new Date(details.date)
-            if (ctx.fresh) {
+            if (ctxFresh()) {
                 ctx.status = 304
                 return
             }
@@ -375,7 +386,7 @@ export default class UnboxApp {
         // Send and check the Last-Modified/If-Modified-Since headers
         ctx.status = 200
         ctx.lastModified = new Date(details.date)
-        if (ctx.fresh) {
+        if (ctxFresh()) {
             ctx.status = 304
             return
         }
