@@ -113,7 +113,7 @@ export default class UnboxApp {
         // Solve CORS issues
         ctx.set('Access-Control-Allow-Origin', '*')
 
-        ctx.set('Cache-Control', `max-age=0`)
+        ctx.set('Cache-Control', `max-age=1`)
 
         // Front page
         if (request_path === '/') {
