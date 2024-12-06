@@ -43,6 +43,8 @@ export default class UnboxApp {
 
         this.app = new Koa()
 
+        this.startupDate = Date.now()
+
         // Add the layers
 
         // Catch errors
@@ -89,6 +91,14 @@ export default class UnboxApp {
 
         this.app.use(koaBody())
 
+        this.app.use(async (ctx, next) => {
+            try {
+                await next()
+            } finally {
+                console.log(`${ctx.method} ${ctx.url} ${ctx.status} "${ctx.headers['if-modified-since']}" "${ctx.headers['cache-control']}"`)
+            }
+        })
+
         // And the main handler
         this.app.use(this.handler.bind(this))
     }
@@ -105,7 +115,18 @@ export default class UnboxApp {
         // Solve CORS issues
         ctx.set('Access-Control-Allow-Origin', '*')
 
-        ctx.set('Cache-Control', `max-age=0`)
+        ctx.set('Cache-Control', `max-age=1`)
+
+        const ctxFresh = () => {
+            if (this.options.nginx?.cache?.support_bypass) {
+                // ctx fresh uses https://github.com/jshttp/fresh/blob/v0.5.2/index.js#L43-L49
+                // which always honors `Cache-Control: no-cache` in the request header
+                return ctx.fresh
+            } else {
+                const modifiedSince = ctx.request.headers['if-modified-since']
+                return !!modifiedSince && modifiedSince === ctx.response.headers['last-modified']
+            }
+        }
 
         // Front page
         if (request_path === '/') {
@@ -205,8 +226,12 @@ export default class UnboxApp {
 
             // Send and check the Last-Modified/If-Modified-Since headers
             ctx.status = 200
-            ctx.lastModified = new Date(details.date)
-            if (ctx.fresh) {
+            // If we fix a bug on the index pages, then the index page's `Last-Modified` date
+            // needs to change, or else nginx will continue to serve up the old buggy version
+            // (because the zip itself hasn't changed).
+            // TODO: Use a "deployDate" instead, so restarting Node doesn't flush the index cache?
+            ctx.lastModified = new Date(Math.max(details.date, this.startupDate))
+            if (ctxFresh()) {
                 ctx.status = 304
                 return
             }
@@ -367,7 +392,7 @@ export default class UnboxApp {
         // Send and check the Last-Modified/If-Modified-Since headers
         ctx.status = 200
         ctx.lastModified = new Date(details.date)
-        if (ctx.fresh) {
+        if (ctxFresh()) {
             ctx.status = 304
             return
         }
