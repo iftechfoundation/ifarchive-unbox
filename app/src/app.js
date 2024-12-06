@@ -43,6 +43,8 @@ export default class UnboxApp {
 
         this.app = new Koa()
 
+        this.startupDate = Date.now()
+
         // Add the layers
 
         // Catch errors
@@ -224,7 +226,11 @@ export default class UnboxApp {
 
             // Send and check the Last-Modified/If-Modified-Since headers
             ctx.status = 200
-            ctx.lastModified = new Date(details.date)
+            // If we fix a bug on the index pages, then the index page's `Last-Modified` date
+            // needs to change, or else nginx will continue to serve up the old buggy version
+            // (because the zip itself hasn't changed).
+            // TODO: Use a "deployDate" instead, so restarting Node doesn't flush the index cache?
+            ctx.lastModified = new Date(Math.max(details.date, this.startupDate))
             if (ctxFresh()) {
                 ctx.status = 304
                 return
