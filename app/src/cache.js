@@ -3,7 +3,7 @@
 File cache
 ==========
 
-Copyright (c) 2023 Dannii Willis
+Copyright (c) 2026 Dannii Willis
 MIT licenced
 https://github.com/iftechfoundation/ifarchive-unbox
 
@@ -18,7 +18,7 @@ import child_process from 'child_process'
 import fetch from 'node-fetch'
 import fs from 'fs/promises'
 import fs_sync from 'fs'
-import {chunk} from 'lodash-es'
+import {chunk, difference, intersection} from 'lodash-es'
 import path from 'path'
 import { pipeline } from 'stream/promises'
 import util from 'util'
@@ -171,6 +171,56 @@ export default class FileCache {
         }
 
         console.log(`Cache initialized with ${this.lru.length} entries, ${this.size} bytes total`)
+    }
+
+    // Audit the files in the cache
+    async audit() {
+        let result = ''
+        const cache_files = []
+        for (const key of this.cache.keys()) {
+            cache_files.push(key)
+        }
+        result += `<p>Files in cache: ${cache_files.join(', ')}`
+
+        const fs_files = await (await fs.readdir(this.cache_dir)).map(filename => filename.substring(0, 10))
+        result += `<p>Files in FS: ${fs_files.join(', ')}`
+
+        // Check for unmatched files
+        const missing_from_cache = difference(fs_files, cache_files)
+        if (missing_from_cache.length) {
+            result += `<p>Files missing from cache: ${missing_from_cache.join(', ')}`
+        }
+        const missing_from_fs = difference(cache_files, fs_files)
+        if (missing_from_fs.length) {
+            result += `<p>Files missing from FS: ${missing_from_fs.join(', ')}`
+        }
+
+        // For files that are in both, check if their dates or sizes are wrong
+        const union_files = intersection(cache_files, fs_files)
+        const wrong_dates = []
+        const wrong_sizes = []
+        for (const hash of union_files) {
+            const cache_entry = this.cache.get(hash)
+            const file_path = this.file_path(hash, cache_entry.type)
+            try {
+                const stat = await fs.stat(file_path)
+                if (cache_entry.date !== +stat.mtime) {
+                    wrong_dates.push(hash)
+                }
+                if (cache_entry.size !== stat.size) {
+                    wrong_sizes.push(hash)
+                }
+            }
+            catch {}
+        }
+        if (wrong_dates.length) {
+            result += `<p>Files with date mismatch: ${wrong_dates.join(', ')}`
+        }
+        if (wrong_sizes.length) {
+            result += `<p>Files with size mismatch: ${wrong_sizes.join(', ')}`
+        }
+
+        return result
     }
 
     // Download and set up a cache entry

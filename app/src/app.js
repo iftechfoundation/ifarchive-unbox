@@ -107,6 +107,14 @@ export default class UnboxApp {
 
         ctx.set('Cache-Control', `max-age=0`)
 
+        // Show the audit page
+        if (request_path === '/audit/') {
+            ctx.body = templates.wrapper({
+                content: await this.cache.audit(),
+            })
+            return
+        }
+
         // Front page
         if (request_path === '/') {
             // Allow the IF Archive admins to direct us to update the index as soon as it changes
