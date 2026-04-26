@@ -188,7 +188,7 @@ export default class FileCache {
         // Wrap our processing in a try-catch so that we can remove the file if it fails for any reason
         let contents, date, normalised_paths, size
         try {
-            date = new Date(response.headers.get('last-modified'))
+            date = new Date(this.index.hash_to_date.get(hash))
 
             // Reset the file's date
             await fs.utimes(file_path, date, date)
@@ -396,10 +396,9 @@ export default class FileCache {
     }
 
     // Purge out of date files
-    // The argument is a map of hash->timestamp, extracted from the Master-Index we just loaded
-    async purge(data) {
+    async purge() {
         for (const [hash, entry] of this.cache) {
-            if (entry instanceof CacheEntry && entry.date !== data.get(hash))
+            if (entry instanceof CacheEntry && entry.date !== this.index.hash_to_date.get(hash))
             {
                 console.log(`Removing outdated cache file ${hash}.${entry.type} (${this.index.hash_to_path.get(hash)})`)
                 this.cache.delete(hash)

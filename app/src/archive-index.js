@@ -30,6 +30,7 @@ export default class ArchiveIndex {
         this.data_path = path.join(data_dir, 'archive-data.json')
         this.etag = null
         this.etag_path = path.join(data_dir, 'archive-etag.txt')
+        this.hash_to_date = null
         this.hash_to_path = null
         this.options = options
         this.path_to_hash = null
@@ -156,14 +157,14 @@ export default class ArchiveIndex {
     // Update the maps
     async update_maps(data) {
         // Files
-        const hash_to_date = new Map()
+        this.hash_to_date = new Map()
         this.hash_to_path = new Map()
         this.path_to_hash = new Map()
         for (const file of data.files) {
             const hash = file[0]
             const path = file[1]
             const date = file[2]
-            hash_to_date.set(hash, date)
+            this.hash_to_date.set(hash, date)
             this.hash_to_path.set(hash, path)
             this.path_to_hash.set(path, hash)
         }
@@ -189,6 +190,6 @@ export default class ArchiveIndex {
         console.log(`ArchiveIndex: found ${this.hash_to_path.size} hash entries, ${this.symlinked_dirs.size} symlinked dirs, ${this.symlinked_files.size} symlinked files, ${this.blocked_files.size} blocked files`)
 
         // Purge the cache of old files
-        await this.cache.purge(hash_to_date)
+        await this.cache.purge()
     }
 }
