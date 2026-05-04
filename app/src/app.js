@@ -109,6 +109,7 @@ export default class UnboxApp {
 
         // Show the audit page
         if (request_path === '/audit/') {
+            ctx.set('Cache-Control', `no-cache`)
             ctx.body = templates.wrapper({
                 content: await this.cache.audit(),
             })
