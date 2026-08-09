@@ -23,6 +23,18 @@ GZIP="gzip on;
 LISTEN="listen 80;
     listen [::]:80;"
 
+if [ "$SUPPORT_BYPASS" = "true" ]; then
+    BYPASS="proxy_cache_bypass \$http_pragma;"
+fi
+
+# Common proxy settings
+PROXY="proxy_pass http://app:8080;
+        proxy_set_header Host \$host;
+        proxy_cache cache;
+        proxy_cache_revalidate on;
+        $BYPASS
+        add_header X-Cache \$upstream_cache_status;"
+
 # Erase the conf file
 > $CONF_FILE
 
@@ -53,8 +65,13 @@ EOF
     fi
 fi
 
+CACHE_DIR="$DATA_DIR/nginx-cache"
+mkdir -p $CACHE_DIR
+
 # Top domain server
 cat >> $CONF_FILE <<EOF
+proxy_cache_path $CACHE_DIR keys_zone=cache:${KEYS_SIZE}m levels=1:2 max_size=${MAX_SIZE}m;
+
 server {
     $LISTEN
     $SERVER_NAME
@@ -62,40 +79,24 @@ server {
     $GZIP
 
     location / {
-        proxy_pass http://app:8080;
-        proxy_set_header Host \$host;
+        $PROXY
     }
 }
 EOF
 
 if [ -n "$DOMAIN" ] && [ "$SUBDOMAINS" = "true" ]; then
 
-CACHE_DIR="$DATA_DIR/nginx-cache"
-mkdir -p $CACHE_DIR
-
-if [ "$SUPPORT_BYPASS" = "true" ]; then
-    BYPASS="proxy_cache_bypass \$http_pragma;"
-fi
-
 # Subdomain server
 cat >> $CONF_FILE <<EOF
-
-proxy_cache_path $CACHE_DIR keys_zone=cache:${KEYS_SIZE}m levels=1:2 max_size=${MAX_SIZE}m;
 
 server {
     $LISTEN
     server_name *.${DOMAIN};
     $SSL
     $GZIP
-    proxy_cache cache;
-    proxy_cache_valid 301 365d;
-    proxy_cache_valid any 1d;
-    $BYPASS
 
     location / {
-        proxy_pass http://app:8080;
-        proxy_set_header Host \$host;
-        add_header X-Cache \$upstream_cache_status;
+        $PROXY
     }
 }
 EOF
