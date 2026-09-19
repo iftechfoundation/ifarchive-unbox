@@ -234,7 +234,11 @@ export default class FileCache {
         }
         const file_path = this.file_path(hash, type)
         await pipeline(response.body, fs_sync.createWriteStream(file_path))
+        return this.finalize_download(hash, file_path, type)
+    }
 
+    // After a zip is on disk (downloaded or test-injected), record it in the cache and evict if needed.
+    async finalize_download(hash, file_path, type) {
         // Wrap our processing in a try-catch so that we can remove the file if it fails for any reason
         let contents, date, normalised_paths, size
         try {
@@ -260,7 +264,7 @@ export default class FileCache {
         this.cache.set(hash, entry)
 
         // Check the cache size
-        if (this.size > this.max_size) {
+        if (this.lru.length > this.max_entries || this.size > this.max_size) {
             await this.evict()
         }
         return entry
@@ -270,7 +274,15 @@ export default class FileCache {
     // This checks both the number of entries and their total size. (Size is the total size of zip files, not the total unpacked size.) We discard old entries as long as we're over either limit.
     async evict() {
         while (this.lru.length > this.max_entries || this.size > this.max_size) {
-            const hash = this.lru.pop()
+            // Remove LRU hashes with missing cache entries
+            this.lru = this.lru.filter(hash => this.cache.has(hash))
+            // Evict the least recently used resolved CacheEntry. (Pending downloads don't have a size, so they don't count towards the size limit.)
+            const i = this.lru.findLastIndex(hash => !(this.cache.get(hash) instanceof Promise))
+            if (i < 0) {
+                // Nothing left we can safely remove (only in-flight downloads remain)
+                break
+            }
+            const hash = this.lru.splice(i, 1)[0]
             const entry = this.cache.get(hash)
             this.cache.delete(hash)
             this.size -= entry.size
