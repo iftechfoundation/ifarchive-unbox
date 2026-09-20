@@ -23,9 +23,10 @@ import path from 'path'
 import { pipeline } from 'stream/promises'
 import util from 'util'
 
-import {SUPPORTED_FORMATS} from './common.js'
+import {hash_archive_path, make_compound_path, SUPPORTED_FORMATS} from './common.js'
 
 const execFile = util.promisify(child_process.execFile)
+const NESTED_ORIGINS_FILE = 'nested-origins.json'
 
 /* Promise-rejection handlers for untar/unzip. These return objects of the
    form { stdout, stderr } or { failed, stdout, stderr }.
@@ -116,12 +117,14 @@ function spawn_pipe_file_cb(command, args, callback) {
 const spawn_pipe_file = util.promisify(spawn_pipe_file_cb)
 
 class CacheEntry {
-    constructor (contents, date, normalised_paths, size, type) {
+    constructor (contents, date, normalised_paths, size, type, nested) {
         this.contents = contents
         this.date = date
         this.normalised_paths = normalised_paths
         this.size = size
         this.type = type
+        // For nested archives: {parent_hash, member_path, compound_path}
+        this.nested = nested || null
     }
 }
 
@@ -129,16 +132,22 @@ export default class FileCache {
     constructor(data_dir, options) {
         this.cache = new Map()
         this.cache_dir = path.join(data_dir, 'cache')
+        this.data_dir = data_dir
         this.index = null
         this.lru = []
         this.max_buffer = options.cache.max_buffer
         this.max_entries = options.cache.max_entries
         this.max_size = options.cache.max_size
+        // nested_hash -> {parent_hash, member_path, compound_path}
+        this.nested_origins = new Map()
+        this.nested_origins_path = path.join(data_dir, NESTED_ORIGINS_FILE)
         this.options = options
         this.size = 0
     }
 
     async init() {
+        await this.load_nested_origins()
+
         // Get all the files currently in the cache directory
         const files = await fs.readdir(this.cache_dir)
 
@@ -146,16 +155,29 @@ export default class FileCache {
         // Process in chunks so that the server isn't overwhelmed
         for (const batch of chunk(files, 4)) {
             await Promise.all(batch.map(async file => {
+                // Skip sidecar / unexpected files
+                if (file.endsWith('.nested.json')) {
+                    return
+                }
                 const file_path = path.join(this.cache_dir, file)
-                const parts = /(\w+)\.(.+)/.exec(file)
+                const parts = /^([0-9a-z]+)\.(.+)$/i.exec(file)
+                if (!parts) {
+                    console.log(`Ignoring unexpected cache file ${file}`)
+                    return
+                }
                 const hash = parts[1]
+                const type = parts[2]
+                if (!SUPPORTED_FORMATS.test(`.${type}`) && !['tar.gz', 'tar.z', 'tgz', 'zip'].includes(type.toLowerCase())) {
+                    console.log(`Ignoring unexpected cache file ${file}`)
+                    return
+                }
                 const stat = await fs.stat(file_path)
                 const date = +stat.mtime
                 const size = stat.size
-                const type = parts[2]
                 try {
                     const [contents, normalised_paths] = await this.list_contents(file_path, type)
-                    const entry = new CacheEntry(contents, date, normalised_paths, size, type)
+                    const nested = this.nested_origins.get(hash) || null
+                    const entry = new CacheEntry(contents, date, normalised_paths, size, type, nested)
                     this.cache.set(hash, entry)
                     this.lru.push(hash)
                     this.size += size
@@ -170,7 +192,78 @@ export default class FileCache {
             }))
         }
 
-        console.log(`Cache initialized with ${this.lru.length} entries, ${this.size} bytes total`)
+        console.log(`Cache initialized with ${this.lru.length} entries, ${this.size} bytes total, ${this.nested_origins.size} nested origins`)
+    }
+
+    async load_nested_origins() {
+        try {
+            const data = JSON.parse(await fs.readFile(this.nested_origins_path, {encoding: 'utf8'}))
+            this.nested_origins = new Map(Object.entries(data))
+        }
+        catch (_) {
+            this.nested_origins = new Map()
+        }
+    }
+
+    async save_nested_origins() {
+        const data = Object.fromEntries(this.nested_origins)
+        await fs.writeFile(this.nested_origins_path, JSON.stringify(data))
+    }
+
+    // Record that a hash refers to a nested archive extracted from a parent
+    async register_nested(hash, origin, {save = true} = {}) {
+        const existing_top = this.index?.hash_to_path?.get(hash)
+        if (existing_top && existing_top !== origin.compound_path) {
+            throw new Error(`Nested archive hash collision for ${origin.compound_path}`)
+        }
+        const previous = this.nested_origins.get(hash)
+        if (previous) {
+            if (previous.compound_path !== origin.compound_path) {
+                throw new Error(`Nested archive hash collision for ${origin.compound_path}`)
+            }
+            return false
+        }
+        this.nested_origins.set(hash, {
+            parent_hash: origin.parent_hash,
+            member_path: origin.member_path,
+            compound_path: origin.compound_path,
+        })
+        if (save) {
+            await this.save_nested_origins()
+        }
+        return true
+    }
+
+    get_nested_origin(hash) {
+        return this.nested_origins.get(hash) || null
+    }
+
+    // Resolve a display/source path for a hash (top-level or nested)
+    resolve_path(hash) {
+        return this.index.hash_to_path.get(hash) || this.nested_origins.get(hash)?.compound_path || null
+    }
+
+    // Register nested archives found inside a parent listing
+    async register_nested_members(parent_hash, archive_path, contents) {
+        let changed = false
+        for (const member_path of contents) {
+            if (!SUPPORTED_FORMATS.test(member_path)) {
+                continue
+            }
+            const compound_path = make_compound_path(archive_path, [member_path])
+            const nested_hash = hash_archive_path(compound_path)
+            const registered = await this.register_nested(nested_hash, {
+                parent_hash,
+                member_path,
+                compound_path,
+            }, {save: false})
+            if (registered) {
+                changed = true
+            }
+        }
+        if (changed) {
+            await this.save_nested_origins()
+        }
     }
 
     // Audit the files in the cache
@@ -270,6 +363,55 @@ export default class FileCache {
         return entry
     }
 
+    // Extract a nested archive from its parent into the cache
+    async materialize_nested(hash, origin) {
+        console.log(`Materializing nested cache entry ${hash} (${origin.compound_path})`)
+
+        const parent = await this.get(origin.parent_hash)
+        if (!parent.contents.includes(origin.member_path)) {
+            throw new Error(`${origin.compound_path}: parent does not contain ${origin.member_path}`)
+        }
+
+        const extract_path = parent.normalised_paths?.[origin.member_path] ?? origin.member_path
+        const type_match = SUPPORTED_FORMATS.exec(origin.member_path)
+        if (!type_match) {
+            throw new Error(`Nested archive format not supported: ${origin.member_path}`)
+        }
+        const type = type_match[1].toLowerCase()
+        const file_path = this.file_path(hash, type)
+
+        let contents, normalised_paths, size
+        try {
+            await pipeline(
+                this.get_file_stream(origin.parent_hash, extract_path, parent.type),
+                fs_sync.createWriteStream(file_path),
+            )
+
+            const date = new Date(parent.date)
+            await fs.utimes(file_path, date, date)
+
+            size = (await fs.stat(file_path)).size
+            this.size += size
+
+            ;[contents, normalised_paths] = await this.list_contents(file_path, type)
+        }
+        catch (e) {
+            try {
+                await fs.rm(file_path)
+            }
+            catch (_) {}
+            throw e
+        }
+
+        const entry = new CacheEntry(contents, parent.date, normalised_paths, size, type, origin)
+        this.cache.set(hash, entry)
+
+        if (this.size > this.max_size) {
+            await this.evict()
+        }
+        return entry
+    }
+
     // Evict old entries to make space for new ones
     // This checks both the number of entries and their total size. (Size is the total size of zip files, not the total unpacked size.) We discard old entries as long as we're over either limit.
     async evict() {
@@ -284,6 +426,10 @@ export default class FileCache {
             }
             const hash = this.lru.splice(i, 1)[0]
             const entry = this.cache.get(hash)
+            // Might already have been removed
+            if (!entry || entry instanceof Promise) {
+                continue
+            }
             this.cache.delete(hash)
             this.size -= entry.size
             await fs.rm(this.file_path(hash, entry.type))
@@ -296,12 +442,35 @@ export default class FileCache {
         return path.join(this.cache_dir, `${hash}.${type}`)
     }
 
-    // Get a file out of the cache, or download it
+    // Get a file out of the cache, or download/materialize it
     // This may immediately return the file entry, or it may return a promise that waits for it to be downloaded, but `await`ing the result will handle both seamlessly.
     async get(hash) {
         if (this.cache.has(hash)) {
             this.hit(hash)
             return this.cache.get(hash)
+        }
+
+        const nested = this.nested_origins.get(hash)
+        if (nested) {
+            this.lru.unshift(hash)
+            const entry_promise = this.materialize_nested(hash, nested).catch(err => {
+                this.cache.delete(hash)
+                const oldpos = this.lru.indexOf(hash)
+                if (oldpos >= 0) {
+                    this.lru.splice(oldpos, 1)
+                }
+                throw err
+            })
+            this.cache.set(hash, entry_promise)
+
+            if (this.lru.length > this.max_entries) {
+                await this.evict()
+            }
+            return entry_promise
+        }
+
+        if (!this.index.hash_to_path.has(hash)) {
+            throw new Error(`Unknown file hash: ${hash}`)
         }
 
         console.log(`Downloading cache entry ${hash} (${this.index.hash_to_path.get(hash)})`)
@@ -460,19 +629,46 @@ export default class FileCache {
     // Purge out of date files
     async purge() {
         for (const [hash, entry] of this.cache) {
-            if (entry instanceof CacheEntry && entry.date !== this.index.hash_to_date.get(hash))
-            {
-                console.log(`Removing outdated cache file ${hash}.${entry.type} (${this.index.hash_to_path.get(hash)})`)
+            if (!(entry instanceof CacheEntry)) {
+                continue
+            }
+
+            let outdated = false
+            if (entry.nested) {
+                const parent_date = this.index.hash_to_date.get(entry.nested.parent_hash)
+                outdated = parent_date !== entry.date
+            }
+            else {
+                outdated = entry.date !== this.index.hash_to_date.get(hash)
+            }
+
+            if (outdated) {
+                const label = entry.nested?.compound_path || this.index.hash_to_path.get(hash)
+                console.log(`Removing outdated cache file ${hash}.${entry.type} (${label})`)
                 this.cache.delete(hash)
                 const oldpos = this.lru.indexOf(hash)
-                this.lru.splice(oldpos, 1)
+                if (oldpos >= 0) {
+                    this.lru.splice(oldpos, 1)
+                }
                 this.size -= entry.size
                 await fs.rm(this.file_path(hash, entry.type))
             }
         }
 
+        // Drop nested origins whose parent is no longer in the Archive index
+        let origins_changed = false
+        for (const [hash, origin] of this.nested_origins) {
+            if (!this.index.hash_to_path.has(origin.parent_hash)) {
+                this.nested_origins.delete(hash)
+                origins_changed = true
+            }
+        }
+        if (origins_changed) {
+            await this.save_nested_origins()
+        }
+
         // Check that we have the right number of cache entries
-        const files = await fs.readdir(this.cache_dir)
+        const files = (await fs.readdir(this.cache_dir)).filter(filename => !filename.endsWith('.nested.json'))
         if (this.cache.size !== files.length || this.cache.size !== this.lru.length) {
             console.warn(`Cache has inconsistent data: ${this.cache.size} entries, ${this.lru.length} LRU entries, ${files.length} files`)
         }

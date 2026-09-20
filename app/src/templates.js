@@ -13,7 +13,7 @@ As you can see, this file contains HTML templates for the Unbox front end.
 
 import {escape} from 'lodash-es'
 
-import {UNSAFE_FILES} from './common.js'
+import {SUPPORTED_FORMATS, UNSAFE_FILES} from './common.js'
 
 function escape_url_segment(path) {
     const replacements = path.replaceAll('#', '%23').replaceAll('?', '%3F')
@@ -22,6 +22,12 @@ function escape_url_segment(path) {
 
 function slashbreak(path) {
     return path.replaceAll('/', '/<wbr>')
+}
+
+function archive_link_path(compound_path) {
+    // Compound nested paths are not real IF Archive URLs; link to the outer archive
+    const bang = compound_path.indexOf('!')
+    return bang === -1 ? compound_path : compound_path.substring(0, bang)
 }
 
 export function wrapper(opts) {
@@ -78,11 +84,25 @@ export function list(opts) {
         return `${opts.subdomains && UNSAFE_FILES.test(file) ? `//${opts.hash}.${opts.domain}` : ''}/${opts.hash}/${escape_url_segment(file)}`
     }
 
-    const listcontents = opts.files.map(file => `<li><a href="${make_url(file)}">${slashbreak(escape(file))}</a></li>`).join('\n')
+    function nested_contents_url(file) {
+        const compound = `https://ifarchive.org/if-archive/${opts.path}!${file}`
+        return `/?url=${encodeURIComponent(compound)}`
+    }
+
+    const listcontents = opts.files.map(file => {
+        let item = `<li><a href="${make_url(file)}">${slashbreak(escape(file))}</a>`
+        if (opts.allow_nested && SUPPORTED_FORMATS.test(file)) {
+            item += ` – <a href="${nested_contents_url(file)}">View contents</a>`
+        }
+        item += `</li>`
+        return item
+    }).join('\n')
+
+    const link_path = archive_link_path(opts.path)
     return `
         <div class="Description">
             ${opts.starthtml ? `<form class="StartForm" action="${make_url(opts.starthtml)}"><button class="Button StartButton" type="submit">Open ${slashbreak(escape(opts.starthtml))}</button></form>` : ''}
-            <h2>${escape(opts.label)} <a href="https://ifarchive.org/if-archive/${opts.path}">${slashbreak(escape(opts.path))}</a></h2>
+            <h2>${escape(opts.label)} <a href="https://ifarchive.org/if-archive/${link_path}">${slashbreak(escape(opts.path))}</a></h2>
             ${listcontents.length ? `<div class="ListBox">
                 <ul>${listcontents}</ul>
             </div>` : '<p>No matching files</p>'}

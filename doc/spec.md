@@ -27,6 +27,28 @@ This returns a page listing [the package contents][exlist]:
 
 Click on `index.html` to launch the Twine game. You can also view the images or the CSS file, if you so desire.
 
+### Nested archives (zips of zips)
+
+Some IF Archive packages contain other zip/tar archives. Unbox supports one level of nesting using a jar-style compound path, with `!` separating the outer Archive path from the inner member path:
+
+```
+https://unbox.ifarchive.org/?url=https://ifarchive.org/if-archive/games/mini-comps/oneroom/orgc2006.zip!orgc2006/easter.zip
+```
+
+On a top-level contents listing, each nested archive gets a **View contents** link that opens that compound URL. Nested listings do not offer further nesting (maximum depth is 1).
+
+Nested archives are first-class for serving: each compound path gets its own hash (computed the same way as top-level Archive paths). Files inside the nested archive are then available at the usual:
+
+```
+https://unbox.ifarchive.org/NESTED_HASH/FILENAME
+```
+
+That means interpreters such as Parchment can play files from inside a zip-of-zips using the same URL pattern as for ordinary packages. Nested HTML/SVG files also get their own `NESTED_HASH.unbox.ifarchive.org` subdomain for cookie isolation.
+
+Unbox materializes nested archives lazily into the cache (extracting the inner zip from the already-cached outer zip) and records their origin metadata so nested hashes keep working across restarts. Nested cache entries inherit the parent Archive file's modification date for freshness/purging.
+
+JSON listings of top-level archives that contain nested archives also include a `nested` map from member path to nested hash.
+
 ### File URLs
 
 URLs below the root are of two forms:
@@ -36,7 +58,7 @@ https://unbox.ifarchive.org/HASH/FILENAME
 https://HASH.unbox.ifarchive.org/HASH/FILENAME
 ```
 
-Each Archive path gets a unique hash. In the example above, `games/twine/Absent_Heroes.zip` has the hash `1u3qlfmqda`.
+Each Archive path gets a unique hash. In the example above, `games/twine/Absent_Heroes.zip` has the hash `1u3qlfmqda`. Nested compound paths get hashes by the same rule.
 
 HTML and SVG files are served out of the `HASH.unbox.ifarchive.org` subdomain. This ensures that games cannot wrangle each other's cookies or other stored data.
 
@@ -90,5 +112,4 @@ This repository sets up the first two layers. The CDN must be set up separately.
 
 (You can run Unbox without the CDN, but then media files will not be cached. Unbox will do an `unzip` for every media file request. Only run this way for testing.)
 
-The hash value for a URI is computed by taking the SHA512 hash of the URI, taking the first 48 bits of that, and converting that integer to an alphanumeric string using `toString(36)`. For example: `"games/twine/Absent_Heroes.zip" -> 186486238769662 -> "1u3qlfmqda"`. There is no reason for you to need this information.
-
+The hash value for a URI is computed by taking the SHA512 hash of the URI, taking the first 48 bits of that, and converting that integer to an alphanumeric string using `toString(36)`. For example: `"games/twine/Absent_Heroes.zip" -> 186486238769662 -> "1u3qlfmqda"`. Nested compound paths (with `!`) are hashed the same way. There is no reason for you to need this information.

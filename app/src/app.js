@@ -18,7 +18,11 @@ import {
     TYPES_THAT_ARENT_NO_TRANSFORM,
     TYPES_TO_DETECT_BETTER,
     UNSAFE_FILES,
+    SUPPORTED_FORMATS,
     escape_regexp,
+    hash_archive_path,
+    make_compound_path,
+    parse_compound_path,
 } from './common.js'
 import * as templates from './templates.js'
 
@@ -175,7 +179,15 @@ export default class UnboxApp {
             // Remove "if-archive/" part
             file_path = file_path.substring(11)
 
-            // Handle symlinks
+            let nested_members
+            try {
+                ({archive_path: file_path, nested_members} = parse_compound_path(file_path))
+            }
+            catch (err) {
+                ctx.throw(err.status || 400, err.message)
+            }
+
+            // Handle symlinks (on the top-level Archive path only)
             if (this.index.symlinked_files.has(file_path)) {
                 file_path = this.index.symlinked_files.get(file_path)
             }
@@ -188,16 +200,52 @@ export default class UnboxApp {
                 }
             }
 
-            const hash = this.index.path_to_hash.get(file_path)
-            if (!hash) {
+            const parent_hash = this.index.path_to_hash.get(file_path)
+            if (!parent_hash) {
                 ctx.throw(404, `Unknown file: ${query.url}`)
             }
 
-            if (this.index.blocked_files.has(hash)) {
+            if (this.index.blocked_files.has(parent_hash)) {
                 ctx.throw(403, `Cannot handle file: ${query.url}`)
             }
 
-            const details = await this.cache.get(hash)
+            let hash = parent_hash
+            let details = await this.cache.get(parent_hash)
+            let list_path = file_path
+            let allow_nested = true
+
+            if (nested_members.length) {
+                const member_path = nested_members[0]
+                if (!SUPPORTED_FORMATS.test(member_path)) {
+                    ctx.throw(400, `Nested path is not a supported archive: ${member_path}`)
+                }
+
+                // Match the member against the parent listing (case-insensitive fallback)
+                let resolved_member = member_path
+                if (!details.contents.includes(member_path)) {
+                    const case_insensitive_matches = details.contents.filter(file => member_path.localeCompare(file, undefined, {sensitivity: 'accent'}) === 0)
+                    if (case_insensitive_matches.length === 1) {
+                        resolved_member = case_insensitive_matches[0]
+                    }
+                    else {
+                        ctx.throw(404, `${file_path} does not contain archive ${member_path}`)
+                    }
+                }
+
+                list_path = make_compound_path(file_path, [resolved_member])
+                hash = hash_archive_path(list_path)
+                await this.cache.register_nested(hash, {
+                    parent_hash,
+                    member_path: resolved_member,
+                    compound_path: list_path,
+                })
+                details = await this.cache.get(hash)
+                // Nested listings cannot themselves be nested further
+                allow_nested = false
+            }
+            else {
+                await this.cache.register_nested_members(parent_hash, file_path, details.contents)
+            }
 
             // Open (redirect) to a specific file
             const filename = query.open
@@ -251,17 +299,18 @@ export default class UnboxApp {
                 }
                 else {
                     ctx.body = templates.wrapper({
-                        canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}&find=${search}`,
+                        canonical: `//${this.options.domain}/?url=https://ifarchive.org/if-archive/${list_path}&find=${search}`,
                         content: templates.list({
                             alllink: true,
+                            allow_nested,
                             domain: this.options.domain,
                             files: results,
                             hash: hash,
                             label: `Files matching ${search} in`,
-                            path: file_path,
+                            path: list_path,
                             subdomains: this.options.subdomains,
                         }),
-                        title: path.basename(file_path),
+                        title: path.basename(list_path),
                     })
                 }
                 return
@@ -269,10 +318,19 @@ export default class UnboxApp {
 
             // JSON
             if ('json' in query) {
-                ctx.body = {
+                const body = {
                     files: details.contents,
                     hash: hash,
                 }
+                if (allow_nested) {
+                    body.nested = {}
+                    for (const file of details.contents) {
+                        if (SUPPORTED_FORMATS.test(file)) {
+                            body.nested[file] = hash_archive_path(make_compound_path(file_path, [file]))
+                        }
+                    }
+                }
+                ctx.body = body
                 return
             }
 
@@ -304,17 +362,18 @@ export default class UnboxApp {
 
             // Show the list of files
             ctx.body = templates.wrapper({
-                canonical: `//${this.options.domain}/?url=https://if-archive.org/if-archive/${file_path}`,
+                canonical: `//${this.options.domain}/?url=https://ifarchive.org/if-archive/${list_path}`,
                 content: templates.list({
+                    allow_nested,
                     domain: this.options.domain,
                     files: details.contents,
                     hash: hash,
                     label: 'Contents of',
-                    path: file_path,
+                    path: list_path,
                     starthtml,
                     subdomains: this.options.subdomains,
                 }),
-                title: path.basename(file_path),
+                title: path.basename(list_path),
             })
             return
         }
@@ -325,8 +384,8 @@ export default class UnboxApp {
             ctx.throw(400, 'This is not a valid file')
         }
         const hash = path_parts[1]
-        // We could validate the hash format here, but only valid hashes are in index.hash_to_path.
-        const zip_path = this.index.hash_to_path.get(hash)
+        // Top-level hashes come from Master-Index; nested hashes from the nested-origins registry
+        const zip_path = this.cache.resolve_path(hash)
         if (!zip_path) {
             ctx.throw(404, `Unknown file hash: ${hash}`)
         }

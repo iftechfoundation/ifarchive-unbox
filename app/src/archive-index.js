@@ -13,11 +13,10 @@ downloads it and parses it.
 
 */
 
-import crypto from 'crypto'
 import fs from 'fs/promises'
 import path from 'path'
 
-import {SUPPORTED_FORMATS} from './common.js'
+import {hash_archive_path, SUPPORTED_FORMATS} from './common.js'
 
 import fetch from 'node-fetch'
 import flow from 'xml-flow'
@@ -125,9 +124,7 @@ export default class ArchiveIndex {
                 }
                 // Regular files
                 else if (SUPPORTED_FORMATS.test(path)) {
-                    // 48 bits of the sha512 hash of the path
-                    let hash = parseInt(crypto.createHash('sha512').update(path).digest('hex').substring(0, 12), 16)
-                    hash = hash.toString(36).padStart(10, '0')
+                    const hash = hash_archive_path(path)
                     const date = parseInt(file.rawdate, 10) * 1000
                     files.push([hash, path, date])
 

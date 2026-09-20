@@ -9,6 +9,8 @@ https://github.com/iftechfoundation/ifarchive-unbox
 
 */
 
+import crypto from 'crypto'
+
 // Maps familiar file suffixes to MIME types.
 export const COMMON_FILE_TYPES = {
     a3c: 'application/x-alan',
@@ -49,6 +51,44 @@ export const COMMON_FILE_TYPES = {
 
 // Regex: what package formats do we handle?
 export const SUPPORTED_FORMATS = /\.(tar\.gz|tgz|tar\.z|zip)$/i
+
+// Nested archives use a jar-style compound path: outer.zip!inner/path.zip
+export const NESTED_PATH_SEPARATOR = '!'
+
+// Only zip-of-zips for now (one nesting level)
+export const MAX_NESTING_DEPTH = 1
+
+// Hash an archive path (top-level or compound) the same way Master-Index entries are hashed
+export function hash_archive_path(archive_path) {
+    const hash = parseInt(crypto.createHash('sha512').update(archive_path).digest('hex').substring(0, 12), 16)
+    return hash.toString(36).padStart(10, '0')
+}
+
+// Split a compound path into the IF Archive zip path and nested member path(s)
+export function parse_compound_path(file_path) {
+    const parts = file_path.split(NESTED_PATH_SEPARATOR)
+    if (parts.length === 1) {
+        return {archive_path: parts[0], nested_members: []}
+    }
+    if (parts.length > MAX_NESTING_DEPTH + 1) {
+        const err = new Error(`Nested archives are limited to ${MAX_NESTING_DEPTH} level${MAX_NESTING_DEPTH === 1 ? '' : 's'} deep`)
+        err.status = 400
+        throw err
+    }
+    if (parts.some(part => part === '')) {
+        const err = new Error('Invalid nested archive path')
+        err.status = 400
+        throw err
+    }
+    return {archive_path: parts[0], nested_members: parts.slice(1)}
+}
+
+export function make_compound_path(archive_path, nested_members) {
+    if (!nested_members.length) {
+        return archive_path
+    }
+    return [archive_path, ...nested_members].join(NESTED_PATH_SEPARATOR)
+}
 
 // MIME types that don't need to be no-transform
 // Cloudflare compresses only a small list of MIME types, and they don't include any of our storyfile formats
